@@ -2,14 +2,16 @@
 
 > These are things Youssef needs to decide before or during the build. ASK before assuming. They're listed roughly in the order they'll come up.
 
-## DECISION 1: Domain structure ✅ DECIDED
+## DECISION 1: Domain structure ✅ DECIDED (revised 2026-05-09)
 
-**Decision (2026-05-09):** `paragon.dashboards.sakneen.com`. Per-client subdomain under a `dashboards.sakneen.com` parent. Combines (a) and (b): premium per-client feel + a single parent domain that naturally hosts the admin portal at `dashboards.sakneen.com/admin`.
+**Decision:** `<org-slug>.sakneen.com` — per-client subdomain directly off `sakneen.com`. Paragon's URL is `paragonadeer.sakneen.com` (slug = lowercased, despaced organization id from sakneen.com).
+
+**Stage 1 hosting:** Local. Production hosting (Railway, real DNS) deferred until after the local MVP is validated.
 
 **Implications:**
-- DNS: wildcard `*.dashboards.sakneen.com` CNAME to Railway
-- NextAuth: cookie domain set to `.dashboards.sakneen.com` so admin + tenant subdomains share session if we ever want that (TBD; default is per-host)
-- Tenant resolution: derive `client_id` from subdomain (`paragon` → Paragon Adeer); admin lives on the apex `dashboards.sakneen.com/admin`
+- DNS (later): wildcard `*.sakneen.com` would conflict with whatever is currently at sakneen.com, so dashboard-specific subdomains will be added one at a time, or we move to a wildcard on a dedicated parent. Decide at deploy time.
+- Local dev: simulate via `/etc/hosts` entry (`127.0.0.1 paragonadeer.sakneen.localhost`) plus `next.config.js` allowed hosts, OR just use a query param / route segment in dev (`localhost:3000/t/paragonadeer`). Pick at Day 3 when wiring tenant resolution.
+- Tenant resolution: parse subdomain in middleware → look up `clients` row by `slug` → set `client_id` on request. Admin portal is the bare hostname (no subdomain).
 
 ---
 
@@ -35,22 +37,28 @@
 
 ---
 
-## DECISION 4: Initial password handling for new users 🟡 PENDING CLARIFICATION
+## DECISION 4: Initial password handling for new users ✅ DECIDED (revised 2026-05-09)
 
-**Direction (2026-05-09):** Reuse the user's sakneen.com credentials. No separate dashboard password.
+**Decision:** Standalone auth via NextAuth credentials provider for Stage 1. Sakneen admin (Youssef) sets the user's password manually; the password is shared with the user out-of-band (in person, WhatsApp, etc.). This is option (c) from the original list.
 
-**Open sub-questions before this can be implemented:**
+**Why standalone now:** The "use sakneen.com credentials" path requires sakneen.com to expose an OAuth/OIDC provider, an auth API, or DB access. None of those are ready. Waiting blocks shipping. Standalone unblocks Stage 1; we migrate to sakneen.com SSO post-MVP.
 
-1. **Mechanism.** Three plausible ways to honor "same credentials":
-   - (i) **OIDC/OAuth against sakneen.com** — sakneen.com plays IdP, dashboard is a relying party. Cleanest, requires sakneen.com to expose `/oauth/authorize` + `/oauth/token` (does it today?).
-   - (ii) **Proxy login** — dashboard's login form POSTs creds to a sakneen.com auth endpoint, gets back a session/JWT, mints its own session cookie. Faster to ship if (i) doesn't exist; couples us to sakneen.com's API shape.
-   - (iii) **Shared user table** — dashboard reads the sakneen.com Postgres user table directly. Tightest coupling, fastest, but breaks the "Phase 1 is Excel upload only, no platform integration" rule from the handoff.
+**Context (informs the future migration path):**
+- Fouad and team already have accounts on sakneen.com under organization "Paragon Adeer"
+- Sakneen platform already has admin roles assigned to sakneen.com users
+- Future state: dashboard delegates auth to sakneen.com so users hit `paragonadeer.sakneen.com`, get bounced to sakneen.com to log in if not already, return as authenticated. Same credentials, single sign-on across platform + dashboards.
 
-2. **Paragon users.** Do Fouad and team currently have sakneen.com accounts? If not, Sakneen needs to provision them on sakneen.com first; the dashboard becomes downstream of that flow.
+**Stage 1 implementation (Day 3):**
+- NextAuth credentials provider, bcrypt password hashes, session cookie
+- Schema: `users` table with `email`, `password_hash`, `role`, `client_id` (null for sakneen admins), `created_at`
+- Sakneen admin role: row in `users` with `role='sakneen_admin'` and `client_id=null`. Seed script inserts Youssef.
+- Client user role: row with `role='client_user'` and `client_id` pointing at their org. For Paragon, that's the row keyed off org "Paragon Adeer".
+- No invite emails. Admin creates user with a chosen password via `/admin/clients/:slug/users` form (Day 6); shares it out-of-band.
 
-3. **Sakneen admin role.** How is `role === 'sakneen_admin'` (per CLAUDE.md hard rule #6) determined? Is it a flag on the sakneen.com user, an email domain check, or a separate dashboard-side mapping?
-
-**Note:** This direction conflicts with the handoff's hard rule "Phase 1 is Excel upload only. Don't start on Sakneen platform integration." Auth integration IS platform integration, so we're explicitly relaxing that rule for auth. Need to confirm scope before Day 3.
+**Migration path (post-MVP, when sakneen.com is ready):**
+- Add an "Auth provider" toggle per environment
+- Implement OIDC client; users with no local password_hash get redirected to sakneen.com instead
+- Old standalone users grandfathered in until they switch
 
 ---
 

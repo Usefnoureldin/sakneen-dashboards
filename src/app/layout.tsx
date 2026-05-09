@@ -24,8 +24,8 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sakneen Dashboards",
-  description: "Live client dashboards by Sakneen.",
+  title: "EOI Analytics Dashboard",
+  description: "Daily Expression of Interest analytics by Sakneen.",
 };
 
 export default function RootLayout({
