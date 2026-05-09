@@ -16,49 +16,89 @@ if (!process.env.DATABASE_URL) {
 const sql = postgres(process.env.DATABASE_URL, { max: 1 });
 const db = drizzle(sql, { schema: { clients, users } });
 
-async function main() {
-  const paragonSlug = "paragonadeer";
-  const youssefEmail = "youssef@sakneen.com";
+type SeedUser = {
+  email: string;
+  name: string;
+  role: "sakneen_admin" | "client_user";
+  clientSlug: string | null;
+};
 
-  let paragon = (await db.select().from(clients).where(eq(clients.slug, paragonSlug)))[0];
-  if (!paragon) {
-    [paragon] = await db
-      .insert(clients)
-      .values({
-        slug: paragonSlug,
-        name: "Paragon Adeer",
-        displayName: "Paragon Adeer",
-        active: true,
-      })
-      .returning();
-    console.log(`+ client: ${paragon.name} (${paragon.id})`);
-  } else {
-    console.log(`= client: ${paragon.name} (${paragon.id}) already seeded`);
+const SEED_USERS: SeedUser[] = [
+  // Sakneen admins
+  { email: "youssef@sakneen.com", name: "Youssef Noureldin", role: "sakneen_admin", clientSlug: null },
+  { email: "nadia@sakneen.com", name: "Nadia", role: "sakneen_admin", clientSlug: null },
+  // Paragon Adeer
+  { email: "fouad.harraz@paragonadeer.com", name: "Fouad Harraz", role: "client_user", clientSlug: "paragonadeer" },
+  { email: "eslam.abdelazim@paragonadeer.com", name: "Eslam Abdelazim", role: "client_user", clientSlug: "paragonadeer" },
+  { email: "omar.nasser@paragonadeer.com", name: "Omar Nasser", role: "client_user", clientSlug: "paragonadeer" },
+  { email: "sara.robel@weareparagon.dev", name: "Sara Robel", role: "client_user", clientSlug: "paragonadeer" },
+];
+
+function generatePassword(): string {
+  return randomBytes(9).toString("base64url");
+}
+
+async function ensureClient(slug: string, name: string, displayName: string) {
+  const [existing] = await db.select().from(clients).where(eq(clients.slug, slug)).limit(1);
+  if (existing) {
+    console.log(`= client: ${existing.name} (${existing.id}) already seeded`);
+    return existing;
+  }
+  const [created] = await db
+    .insert(clients)
+    .values({ slug, name, displayName, active: true })
+    .returning();
+  console.log(`+ client: ${created.name} (${created.id})`);
+  return created;
+}
+
+async function ensureUser(u: SeedUser, clientId: string | null) {
+  const [existing] = await db.select().from(users).where(eq(users.email, u.email)).limit(1);
+  if (existing) {
+    console.log(`= user:   ${existing.email.padEnd(36)} (${existing.role}) already seeded`);
+    return { user: existing, generatedPassword: null as string | null };
+  }
+  const password = generatePassword();
+  const passwordHash = await bcrypt.hash(password, 10);
+  const [created] = await db
+    .insert(users)
+    .values({
+      email: u.email,
+      passwordHash,
+      name: u.name,
+      role: u.role,
+      clientId,
+    })
+    .returning();
+  console.log(`+ user:   ${created.email.padEnd(36)} (${created.role})`);
+  return { user: created, generatedPassword: password };
+}
+
+async function main() {
+  const paragon = await ensureClient("paragonadeer", "Paragon Adeer", "Paragon Adeer");
+
+  const slugToId = new Map<string, string>([[paragon.slug, paragon.id]]);
+
+  const generated: { email: string; password: string }[] = [];
+  for (const u of SEED_USERS) {
+    const clientId = u.clientSlug ? slugToId.get(u.clientSlug) ?? null : null;
+    if (u.clientSlug && !clientId) {
+      throw new Error(`Unknown clientSlug ${u.clientSlug} for ${u.email}`);
+    }
+    const result = await ensureUser(u, clientId);
+    if (result.generatedPassword) {
+      generated.push({ email: u.email, password: result.generatedPassword });
+    }
   }
 
-  const existing = (await db.select().from(users).where(eq(users.email, youssefEmail)))[0];
-  if (existing) {
-    console.log(`= user:   ${existing.email} already seeded`);
-  } else {
-    const password = process.env.ADMIN_PASSWORD ?? randomBytes(9).toString("base64url");
-    const passwordHash = await bcrypt.hash(password, 10);
-    const [u] = await db
-      .insert(users)
-      .values({
-        email: youssefEmail,
-        passwordHash,
-        name: "Youssef Noureldin",
-        role: "sakneen_admin",
-        clientId: null,
-      })
-      .returning();
-    console.log(`+ user:   ${u.email} (sakneen_admin)`);
-    if (!process.env.ADMIN_PASSWORD) {
-      console.log("");
-      console.log("  Generated temp password (change after first login):");
-      console.log(`    ${password}`);
-      console.log("");
+  if (generated.length > 0) {
+    console.log("");
+    console.log("Generated temp passwords (share out-of-band, change after first login):");
+    console.log("");
+    for (const g of generated) {
+      console.log(`  ${g.email.padEnd(36)}  ${g.password}`);
     }
+    console.log("");
   }
 
   await sql.end();
