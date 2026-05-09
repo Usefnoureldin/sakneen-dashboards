@@ -5,7 +5,7 @@ import { getTenantSlug } from "@/lib/tenant";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/print"];
 
 export default auth((req) => {
   const { nextUrl } = req;

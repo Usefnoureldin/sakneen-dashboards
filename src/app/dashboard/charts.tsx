@@ -251,22 +251,24 @@ export function TypeCompositionBar({
   residentialValue: number;
   adminValue: number;
 }) {
+  const tCount = residentialCount + adminCount || 1;
+  const tValue = residentialValue + adminValue || 1;
   const data = [
     {
       label: "By count",
-      Residential: residentialCount,
-      Admin: adminCount,
+      Residential: (residentialCount / tCount) * 100,
+      Admin: (adminCount / tCount) * 100,
     },
     {
       label: "By value",
-      Residential: residentialValue,
-      Admin: adminValue,
+      Residential: (residentialValue / tValue) * 100,
+      Admin: (adminValue / tValue) * 100,
     },
   ];
   return (
     <ResponsiveContainer width="100%" height={140}>
       <BarChart layout="vertical" data={data} margin={{ top: 0, right: 10, bottom: 0, left: 60 }}>
-        <XAxis type="number" hide />
+        <XAxis type="number" hide domain={[0, 100]} />
         <YAxis
           type="category"
           dataKey="label"
@@ -277,26 +279,19 @@ export function TypeCompositionBar({
           content={(props: TipProps) => {
             const { active, payload, label } = props;
             if (!active || !payload?.length || label === undefined || label === "") return null;
-            const isCount = tipLabel(label) === "By count";
-            const total = payload.reduce((s, p) => s + tipNum(p), 0);
             return (
               <div style={tooltipStyle}>
                 <div className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500">
                   {tipLabel(label)}
                 </div>
-                {payload.map((p) => {
-                  const n = tipNum(p);
-                  const pct = total === 0 ? 0 : ((n / total) * 100).toFixed(1);
-                  const v = isCount ? formatCount(n) : formatValueShort(n);
-                  return (
-                    <div key={String(p.dataKey)} className="flex justify-between gap-4 text-[12px]">
-                      <span style={{ color: p.color }}>● {tipName(p)}</span>
-                      <span className="tabular-nums font-semibold">
-                        {v} ({pct}%)
-                      </span>
-                    </div>
-                  );
-                })}
+                {payload.map((p) => (
+                  <div key={String(p.dataKey)} className="flex justify-between gap-4 text-[12px]">
+                    <span style={{ color: p.color }}>● {tipName(p)}</span>
+                    <span className="tabular-nums font-semibold">
+                      {tipNum(p).toFixed(1)}%
+                    </span>
+                  </div>
+                ))}
               </div>
             );
           }}

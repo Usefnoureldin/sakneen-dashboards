@@ -1,0 +1,192 @@
+"use client";
+
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
+import type { DailyBucket } from "@/lib/aggregations";
+import { formatCount, formatDateShort, formatValueShort } from "@/lib/format";
+
+const BLUE = "#2109C4";
+const TERRACOTTA = "#C84B31";
+const GREEN = "#4FB54E";
+const AMBER = "#F59E0B";
+const SLATE_GRID = "#DDE2EB";
+
+const axisProps = {
+  tick: { fill: "#374151", fontSize: 9, fontFamily: "var(--font-sans)" },
+  axisLine: { stroke: SLATE_GRID },
+  tickLine: { stroke: SLATE_GRID },
+};
+
+export function PrintDailyChart({
+  data,
+  metric,
+  stacked,
+  height = 200,
+}: {
+  data: DailyBucket[];
+  metric: "count" | "value";
+  stacked: boolean;
+  height?: number;
+}) {
+  const isCount = metric === "count";
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+        <XAxis
+          dataKey="date"
+          tickFormatter={(d) => formatDateShort(d)}
+          interval="preserveStartEnd"
+          {...axisProps}
+        />
+        <YAxis
+          tickFormatter={(v) => (isCount ? formatCount(v) : formatValueShort(v, false))}
+          width={48}
+          {...axisProps}
+        />
+        {stacked ? (
+          <>
+            <Legend
+              wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+              iconType="circle"
+              iconSize={7}
+              align="right"
+              verticalAlign="top"
+            />
+            <Bar
+              dataKey={isCount ? "approvedCount" : "approvedValue"}
+              name="Approved"
+              stackId="a"
+              fill={GREEN}
+              isAnimationActive={false}
+            />
+            <Bar
+              dataKey={isCount ? "pendingCount" : "pendingValue"}
+              name="Pending"
+              stackId="a"
+              fill={AMBER}
+              isAnimationActive={false}
+            />
+            <Bar
+              dataKey={isCount ? "rejectedCount" : "rejectedValue"}
+              name="Rejected"
+              stackId="a"
+              fill={TERRACOTTA}
+              isAnimationActive={false}
+            />
+          </>
+        ) : (
+          <Bar
+            dataKey={isCount ? "count" : "value"}
+            fill={isCount ? BLUE : TERRACOTTA}
+            isAnimationActive={false}
+          />
+        )}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function PrintStatusDoughnut({
+  approved,
+  pending,
+  rejected,
+  height = 180,
+}: {
+  approved: number;
+  pending: number;
+  rejected: number;
+  height?: number;
+}) {
+  const data = [
+    { name: "Approved", value: approved, color: GREEN },
+    { name: "Pending", value: pending, color: AMBER },
+    { name: "Rejected", value: rejected, color: TERRACOTTA },
+  ];
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <PieChart>
+        <Pie
+          data={data}
+          dataKey="value"
+          innerRadius={45}
+          outerRadius={75}
+          paddingAngle={2}
+          stroke="none"
+          isAnimationActive={false}
+        >
+          {data.map((d) => (
+            <Cell key={d.name} fill={d.color} />
+          ))}
+        </Pie>
+        <Legend
+          wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+          iconType="circle"
+          iconSize={7}
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function PrintTypeBar({
+  residentialCount,
+  adminCount,
+  residentialValue,
+  adminValue,
+  height = 120,
+}: {
+  residentialCount: number;
+  adminCount: number;
+  residentialValue: number;
+  adminValue: number;
+  height?: number;
+}) {
+  const tCount = residentialCount + adminCount || 1;
+  const tValue = residentialValue + adminValue || 1;
+  const data = [
+    {
+      label: "By count",
+      Residential: (residentialCount / tCount) * 100,
+      Admin: (adminCount / tCount) * 100,
+    },
+    {
+      label: "By value",
+      Residential: (residentialValue / tValue) * 100,
+      Admin: (adminValue / tValue) * 100,
+    },
+  ];
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart layout="vertical" data={data} margin={{ top: 0, right: 8, bottom: 0, left: 56 }}>
+        <XAxis type="number" hide domain={[0, 100]} />
+        <YAxis type="category" dataKey="label" width={56} {...axisProps} />
+        <Legend
+          wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
+          iconType="circle"
+          iconSize={7}
+          align="right"
+          verticalAlign="top"
+        />
+        <Bar dataKey="Residential" stackId="t" fill={BLUE} isAnimationActive={false} />
+        <Bar dataKey="Admin" stackId="t" fill={TERRACOTTA} isAnimationActive={false} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/**
+ * Marker the PDF route waits on before screenshotting. Mounts after the React tree commits,
+ * which happens after Recharts has rendered its SVG.
+ */
+export function PrintReadyMarker() {
+  return <div id="print-ready" data-ready="1" style={{ display: "none" }} />;
+}

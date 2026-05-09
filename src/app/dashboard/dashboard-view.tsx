@@ -19,6 +19,7 @@ import {
   formatValueShort,
 } from "@/lib/format";
 import { DailyBarChart, StatusDoughnut, TypeCompositionBar } from "./charts";
+import { DownloadPdfButton } from "./download-pdf-button";
 
 type SortKey = "date" | "count" | "value" | "approved" | "pending" | "rejected";
 
@@ -124,16 +125,19 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
       ) : null}
 
       {/* Title */}
-      <section>
-        <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1.5">
-          Daily EOI Tracker
-        </p>
-        <h1 className="font-serif text-3xl text-charcoal">Expression of Interest Report</h1>
-        <p className="text-sm text-slate-700 mt-1">
-          {formatDateRange(data.upload.dateMin, data.upload.dateMax)} ·{" "}
-          {data.totals.activeDays} active days · last published{" "}
-          {formatTimestamp(data.upload.publishedAt)}
-        </p>
+      <section className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1.5">
+            Daily EOI Tracker
+          </p>
+          <h1 className="font-serif text-3xl text-charcoal">Expression of Interest Report</h1>
+          <p className="text-sm text-slate-700 mt-1">
+            {formatDateRange(data.upload.dateMin, data.upload.dateMax)} ·{" "}
+            {data.totals.activeDays} active days · last published{" "}
+            {formatTimestamp(data.upload.publishedAt)}
+          </p>
+        </div>
+        <DownloadPdfButton />
       </section>
 
       {/* Filters */}
