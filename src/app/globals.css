@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/*
+  Brand tokens for Sakneen Client Dashboards.
+  CSS vars exposed so per-client whitelabel theming can override later (see 01-product-spec.md).
+  Hex values from handoff/docs/05-design-system.md.
+*/
+:root {
+  --color-sakneen-blue: #2109C4;
+  --color-sakneen-blue-dark: #1A1A1A;
+  --color-terracotta: #C84B31;
+  --color-spark-green: #8AE688;
+  --color-spark-green-dark: #4FB54E;
+  --color-warm-cream: #F5F0E8;
+  --color-charcoal: #1A1A1A;
+
+  --color-status-approved: #4FB54E;
+  --color-status-pending: #F59E0B;
+  --color-status-rejected: #C84B31;
+
+  --color-pill-approved-bg: #E8F8E8;
+  --color-pill-approved-fg: #2E7B2E;
+  --color-pill-pending-bg: #FEF3C7;
+  --color-pill-pending-fg: #92400E;
+  --color-pill-rejected-bg: #FBE5DD;
+  --color-pill-rejected-fg: #8B2A1B;
+
+  --color-slate-50: #F8F9FB;
+  --color-slate-100: #EEF1F6;
+  --color-slate-200: #DDE2EB;
+  --color-slate-300: #C5CCD9;
+  --color-slate-500: #6B7280;
+  --color-slate-600: #4B5563;
+  --color-slate-700: #374151;
+}
+
+@theme inline {
+  --color-sakneen-blue: var(--color-sakneen-blue);
+  --color-sakneen-blue-dark: var(--color-sakneen-blue-dark);
+  --color-terracotta: var(--color-terracotta);
+  --color-spark-green: var(--color-spark-green);
+  --color-spark-green-dark: var(--color-spark-green-dark);
+  --color-warm-cream: var(--color-warm-cream);
+  --color-charcoal: var(--color-charcoal);
+
+  --color-status-approved: var(--color-status-approved);
+  --color-status-pending: var(--color-status-pending);
+  --color-status-rejected: var(--color-status-rejected);
+
+  --color-pill-approved-bg: var(--color-pill-approved-bg);
+  --color-pill-approved-fg: var(--color-pill-approved-fg);
+  --color-pill-pending-bg: var(--color-pill-pending-bg);
+  --color-pill-pending-fg: var(--color-pill-pending-fg);
+  --color-pill-rejected-bg: var(--color-pill-rejected-bg);
+  --color-pill-rejected-fg: var(--color-pill-rejected-fg);
+
+  --color-slate-50: var(--color-slate-50);
+  --color-slate-100: var(--color-slate-100);
+  --color-slate-200: var(--color-slate-200);
+  --color-slate-300: var(--color-slate-300);
+  --color-slate-500: var(--color-slate-500);
+  --color-slate-600: var(--color-slate-600);
+  --color-slate-700: var(--color-slate-700);
+
+  --font-serif: var(--font-dm-serif), Georgia, serif;
+  --font-sans: var(--font-dm-sans), system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, monospace;
+
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+}
+
+body {
+  background: var(--color-warm-cream);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+}

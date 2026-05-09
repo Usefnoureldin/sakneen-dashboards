@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sakneen_dashboards_pg
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: sakneen
+      POSTGRES_PASSWORD: sakneen
+      POSTGRES_DB: sakneen_dashboards
+    volumes:
+      - sakneen_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sakneen -d sakneen_dashboards"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sakneen_pg_data:
