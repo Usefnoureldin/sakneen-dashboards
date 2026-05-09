@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients, eoiUploads } from "@/db/schema";
+import { logAudit } from "@/lib/audit";
 
 async function requireAdmin() {
   const session = await auth();
@@ -30,7 +31,7 @@ async function loadDraft(slug: string, uploadId: string) {
 }
 
 export async function publishUploadAction(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const slug = String(formData.get("slug"));
   const uploadId = String(formData.get("uploadId"));
   const { client } = await loadDraft(slug, uploadId);
@@ -48,18 +49,32 @@ export async function publishUploadAction(formData: FormData) {
       .where(eq(eoiUploads.id, uploadId));
   });
 
+  await logAudit({
+    userId: session.user.id,
+    clientId: client.id,
+    action: "upload_publish",
+    metadata: { uploadId },
+  });
+
   revalidatePath(`/admin/clients/${slug}`);
   revalidatePath("/admin");
   redirect(`/admin/clients/${slug}`);
 }
 
 export async function discardUploadAction(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const slug = String(formData.get("slug"));
   const uploadId = String(formData.get("uploadId"));
-  await loadDraft(slug, uploadId);
+  const { client } = await loadDraft(slug, uploadId);
 
   await db.update(eoiUploads).set({ status: "discarded" }).where(eq(eoiUploads.id, uploadId));
+
+  await logAudit({
+    userId: session.user.id,
+    clientId: client.id,
+    action: "upload_discard",
+    metadata: { uploadId },
+  });
 
   revalidatePath(`/admin/clients/${slug}`);
   redirect(`/admin/clients/${slug}`);

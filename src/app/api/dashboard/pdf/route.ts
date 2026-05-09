@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients, eoiUploads } from "@/db/schema";
 import { signPdfToken } from "@/lib/pdf-token";
+import { logAudit, requestAuditContext } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -61,6 +62,14 @@ export async function GET(req: Request) {
       format: "A4",
       printBackground: true,
       margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+    });
+
+    await logAudit({
+      userId: session.user.id,
+      clientId: client.id,
+      action: "pdf_download",
+      metadata: { uploadId: upload.id, bytes: pdfBuffer.length },
+      ...requestAuditContext(req),
     });
 
     return new NextResponse(new Uint8Array(pdfBuffer), {

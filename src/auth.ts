@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { authConfig } from "@/auth.config";
+import { logAudit } from "@/lib/audit";
 
 const credentialsSchema = z.object({
   email: z.string().email().toLowerCase().trim(),
@@ -31,11 +32,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .where(and(eq(users.email, email), eq(users.active, true)))
           .limit(1);
 
-        if (!user) return null;
+        if (!user) {
+          await logAudit({ action: "login_failed", metadata: { email, reason: "no_user" } });
+          return null;
+        }
         const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
+        if (!ok) {
+          await logAudit({
+            userId: user.id,
+            clientId: user.clientId,
+            action: "login_failed",
+            metadata: { reason: "bad_password" },
+          });
+          return null;
+        }
 
         await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
+        await logAudit({
+          userId: user.id,
+          clientId: user.clientId,
+          action: "login",
+        });
 
         return {
           id: user.id,

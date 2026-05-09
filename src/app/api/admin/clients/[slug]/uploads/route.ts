@@ -7,6 +7,7 @@ import { clients, eoiRecords, eoiUploads } from "@/db/schema";
 import { ExcelParseError, parseEoiWorkbook } from "@/lib/excel-parser";
 import { LegacyConvertError, convertLegacyToStandardized } from "@/lib/legacy-converter";
 import { saveUpload } from "@/lib/uploads-storage";
+import { logAudit, requestAuditContext } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -141,6 +142,19 @@ export async function POST(
       { status: 500 },
     );
   }
+
+  await logAudit({
+    userId: session.user.id,
+    clientId: client.id,
+    action: "upload_create",
+    metadata: {
+      uploadId,
+      fileName: file.name,
+      rowCount: parsed.summary.rowCount,
+      legacy: legacyMode,
+    },
+    ...requestAuditContext(req),
+  });
 
   return NextResponse.json(
     {
