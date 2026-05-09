@@ -11,6 +11,7 @@ export function UploadForm({ slug }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [legacy, setLegacy] = useState(false);
 
   const onDrop = useCallback((accepted: File[]) => {
     setError(null);
@@ -34,6 +35,7 @@ export function UploadForm({ slug }: Props) {
     try {
       const fd = new FormData();
       fd.append("file", file);
+      if (legacy) fd.append("legacy", "true");
       const res = await fetch(`/api/admin/clients/${slug}/uploads`, {
         method: "POST",
         body: fd,
@@ -96,12 +98,27 @@ export function UploadForm({ slug }: Props) {
         </div>
       ) : null}
 
-      <div className="flex gap-2 justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-start gap-2 text-sm text-slate-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={legacy}
+            onChange={(e) => setLegacy(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sakneen-blue focus:ring-sakneen-blue"
+          />
+          <span>
+            Treat as legacy format (auto-convert)
+            <span className="block text-xs text-slate-500">
+              Use this for exports that still have Excel-typed dates and blank rows. Removed once
+              the standardized export is rolled out.
+            </span>
+          </span>
+        </label>
         <button
           type="button"
           disabled={!file || submitting}
           onClick={onSubmit}
-          className="rounded-md bg-sakneen-blue px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-md bg-sakneen-blue px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 shrink-0"
         >
           {submitting ? "Parsing..." : "Upload"}
         </button>

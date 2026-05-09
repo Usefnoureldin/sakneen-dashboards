@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients, eoiRecords, eoiUploads } from "@/db/schema";
 import { ExcelParseError, parseEoiWorkbook } from "@/lib/excel-parser";
+import { LegacyConvertError, convertLegacyToStandardized } from "@/lib/legacy-converter";
 import { saveUpload } from "@/lib/uploads-storage";
 
 export const runtime = "nodejs";
@@ -57,16 +58,35 @@ export async function POST(
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const legacyMode = formData.get("legacy") === "true";
+
+  let parseInputBuffer: Buffer | Uint8Array = buffer;
+  const transitionalNotes: string[] = [];
+  if (legacyMode) {
+    try {
+      const converted = convertLegacyToStandardized(buffer);
+      parseInputBuffer = converted.buffer;
+      transitionalNotes.push(
+        `Legacy format auto-converted: ${converted.rowCount} rows kept, ${converted.blankRowsDropped} blank rows dropped`,
+      );
+    } catch (e) {
+      if (e instanceof LegacyConvertError) {
+        return badRequest(`Legacy conversion failed: ${e.message}`);
+      }
+      throw e;
+    }
+  }
 
   let parsed;
   try {
-    parsed = parseEoiWorkbook(buffer);
+    parsed = parseEoiWorkbook(parseInputBuffer);
   } catch (e) {
     if (e instanceof ExcelParseError) {
       return badRequest(e.message);
     }
     throw e;
   }
+  parsed.summary.warnings.unshift(...transitionalNotes);
 
   const uploadId = randomUUID();
   let filePath: string;
