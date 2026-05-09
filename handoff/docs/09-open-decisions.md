@@ -2,31 +2,26 @@
 
 > These are things Youssef needs to decide before or during the build. ASK before assuming. They're listed roughly in the order they'll come up.
 
-## DECISION 1: Domain structure
+## DECISION 1: Domain structure ✅ DECIDED
 
-**Question:** Do you want one of these patterns?
+**Decision (2026-05-09):** `paragon.dashboards.sakneen.com`. Per-client subdomain under a `dashboards.sakneen.com` parent. Combines (a) and (b): premium per-client feel + a single parent domain that naturally hosts the admin portal at `dashboards.sakneen.com/admin`.
 
-- (a) `paragon.sakneen.com` — per-client subdomain (recommended)
-- (b) `dashboards.sakneen.com/paragon` — single app domain with paths
-- (c) Something else (e.g. `app.sakneen.com`)?
-
-**Default if not answered:** Go with (a) `paragon.sakneen.com`. Most premium feel, easiest to whitelabel later.
-
-**Why it matters:** Affects DNS config, NextAuth callback URLs, and routing logic. Easy to change before launch, harder after.
+**Implications:**
+- DNS: wildcard `*.dashboards.sakneen.com` CNAME to Railway
+- NextAuth: cookie domain set to `.dashboards.sakneen.com` so admin + tenant subdomains share session if we ever want that (TBD; default is per-host)
+- Tenant resolution: derive `client_id` from subdomain (`paragon` → Paragon Adeer); admin lives on the apex `dashboards.sakneen.com/admin`
 
 ---
 
-## DECISION 2: Excel format standardization
+## DECISION 2: Excel format standardization ✅ DECIDED
 
-**Question:** Will you ask whoever exports the EOI Excel from Sakneen's platform to standardize the format? Specifically:
+**Decision (2026-05-09):** Yes, standardization is in progress with whoever owns the export. Parser will be built against the standardized format:
 
-- Dates as text in `DD-MM-YYYY` (no Excel date type)
+- Dates as text in `DD-MM-YYYY`
 - No blank rows
-- Always exact same columns in same order
+- Fixed column order
 
-**Default if not answered:** Build the parser to handle the messy current format (the date-swap workaround). Adds ~half a day of work and tech debt that has to live in the parser forever.
-
-**Why it matters:** Cleaner export = simpler parser, fewer edge cases, lower chance of silent data corruption. If Hussein's team can spend 30 min fixing the export, it's worth it.
+**Implication for Day 4:** Skip the date-swap workaround. Treat any non-standard input as a hard parse error with a clear message ("Excel format does not match expected schema, please re-export"). Keep parser strict. If a malformed file shows up before standardization is rolled out everywhere, we reject it loudly rather than silently coercing.
 
 ---
 
@@ -40,17 +35,22 @@
 
 ---
 
-## DECISION 4: Initial password handling for new users
+## DECISION 4: Initial password handling for new users 🟡 PENDING CLARIFICATION
 
-**Question:** When you invite a new client user, what should happen?
+**Direction (2026-05-09):** Reuse the user's sakneen.com credentials. No separate dashboard password.
 
-- (a) System generates a temp password, emails it to them, they change on first login
-- (b) System sends a "set your password" magic link, they pick their own
-- (c) You set a password manually and tell them in person/WhatsApp
+**Open sub-questions before this can be implemented:**
 
-**Default if not answered:** Go with (b) — most professional, works without trusting email-with-passwords.
+1. **Mechanism.** Three plausible ways to honor "same credentials":
+   - (i) **OIDC/OAuth against sakneen.com** — sakneen.com plays IdP, dashboard is a relying party. Cleanest, requires sakneen.com to expose `/oauth/authorize` + `/oauth/token` (does it today?).
+   - (ii) **Proxy login** — dashboard's login form POSTs creds to a sakneen.com auth endpoint, gets back a session/JWT, mints its own session cookie. Faster to ship if (i) doesn't exist; couples us to sakneen.com's API shape.
+   - (iii) **Shared user table** — dashboard reads the sakneen.com Postgres user table directly. Tightest coupling, fastest, but breaks the "Phase 1 is Excel upload only, no platform integration" rule from the handoff.
 
-**Why it matters:** Affects the user invite flow. (b) requires building a password-set page; (a) is simpler but less secure; (c) means we don't email at all.
+2. **Paragon users.** Do Fouad and team currently have sakneen.com accounts? If not, Sakneen needs to provision them on sakneen.com first; the dashboard becomes downstream of that flow.
+
+3. **Sakneen admin role.** How is `role === 'sakneen_admin'` (per CLAUDE.md hard rule #6) determined? Is it a flag on the sakneen.com user, an email domain check, or a separate dashboard-side mapping?
+
+**Note:** This direction conflicts with the handoff's hard rule "Phase 1 is Excel upload only. Don't start on Sakneen platform integration." Auth integration IS platform integration, so we're explicitly relaxing that rule for auth. Need to confirm scope before Day 3.
 
 ---
 
