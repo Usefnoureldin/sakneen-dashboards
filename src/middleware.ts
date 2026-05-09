@@ -25,6 +25,9 @@ export default auth((req) => {
   }
 
   if (!session) {
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    }
     const loginUrl = new URL("/login", nextUrl);
     loginUrl.searchParams.set("from", path);
     return NextResponse.redirect(loginUrl);
