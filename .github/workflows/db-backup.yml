@@ -1,0 +1,35 @@
+name: DB backup
+
+on:
+  schedule:
+    # 02:00 UTC daily
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install postgresql-client (matching prod)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+
+      - name: pg_dump
+        env:
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+        run: |
+          if [ -z "$PROD_DB_URL" ]; then
+            echo "PROD_DB_URL secret not set"
+            exit 1
+          fi
+          mkdir -p out
+          pg_dump --no-owner --no-acl "$PROD_DB_URL" \
+            > "out/sakneen-eoi-$(date -u +%Y%m%d-%H%M%S).sql"
+          ls -la out/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: out/*.sql
+          retention-days: 30

@@ -2,13 +2,20 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "./login-form";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
   const session = await auth();
   if (session?.user) {
     if (session.user.role === "sakneen_admin") redirect("/admin");
     if (session.user.role === "client_user") redirect("/dashboard");
     redirect("/");
   }
+
+  const { from } = await searchParams;
+  const wasDeactivated = from === "deactivated";
 
   return (
     <main className="min-h-screen bg-warm-cream flex items-center justify-center p-6">
@@ -21,6 +28,14 @@ export default async function LoginPage() {
             EOI Analytics Dashboard
           </p>
           <h2 className="font-serif text-2xl text-charcoal mb-6">Sign in</h2>
+          {wasDeactivated ? (
+            <div
+              role="alert"
+              className="mb-4 rounded-md border border-pill-rejected-fg/30 bg-pill-rejected-bg px-3 py-2 text-sm text-pill-rejected-fg"
+            >
+              Your account has been deactivated. Contact your Sakneen admin.
+            </div>
+          ) : null}
           <LoginForm />
         </div>
       </div>

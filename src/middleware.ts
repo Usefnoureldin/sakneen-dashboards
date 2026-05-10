@@ -2,10 +2,22 @@ import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "@/auth.config";
 import { getTenantSlug } from "@/lib/tenant";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/print"];
+const PUBLIC_PATHS = ["/login", "/api/auth", "/print", "/api/health"];
+
+const LOGIN_LIMIT = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function clientIp(req: Request): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 export default auth((req) => {
   const { nextUrl } = req;
@@ -18,6 +30,23 @@ export default auth((req) => {
   // Pass tenant slug down to handlers/server components.
   const requestHeaders = new Headers(req.headers);
   if (slug) requestHeaders.set("x-tenant-slug", slug);
+
+  // Rate limit credential-login posts before anything else.
+  if (path === "/api/auth/callback/credentials" && req.method === "POST") {
+    const ip = clientIp(req);
+    const rl = checkRateLimit(`login:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many login attempts. Try again in a few minutes." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(rl.resetMs / 1000)),
+          },
+        },
+      );
+    }
+  }
 
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
   if (isPublic) {

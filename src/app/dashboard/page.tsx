@@ -1,13 +1,14 @@
 import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
 import { db } from "@/db";
 import { clients, eoiRecords, eoiUploads } from "@/db/schema";
 import { buildDashboard } from "@/lib/aggregations";
+import { requireActiveSession } from "@/lib/session-guard";
 import { DashboardView } from "./dashboard-view";
 
 export default async function DashboardHome() {
-  const session = await auth();
+  const session = await requireActiveSession();
   const hdrs = await headers();
   const subdomainSlug = hdrs.get("x-tenant-slug");
 
@@ -66,7 +67,12 @@ export default async function DashboardHome() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-600 hidden sm:inline">{session?.user?.email}</span>
+            <a
+              href="/profile"
+              className="text-xs text-slate-600 hover:text-charcoal hidden sm:inline"
+            >
+              {session?.user?.email}
+            </a>
             <form
               action={async () => {
                 "use server";

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
+import { requireActiveSession } from "@/lib/session-guard";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const session = await requireActiveSession();
 
   return (
     <div className="min-h-screen bg-warm-cream">
@@ -33,7 +34,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-600 hidden sm:inline">{session?.user?.email}</span>
+            <Link
+              href="/profile"
+              className="text-xs text-slate-600 hover:text-charcoal hidden sm:inline"
+            >
+              {session?.user?.email}
+            </Link>
             <form
               action={async () => {
                 "use server";
