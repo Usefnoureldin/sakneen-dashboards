@@ -69,16 +69,17 @@ export default async function DashboardHome() {
     <div className="min-h-screen bg-warm-cream">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <Image
               src="/logo/sakneen-logo.png"
               alt="Sakneen"
               width={107}
               height={32}
               priority
-              className="h-8 w-auto"
+              className="h-7 sm:h-8 w-auto shrink-0"
             />
-            <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-slate-500">
+            <span className="inline-block w-px h-6 bg-slate-200 shrink-0" aria-hidden="true" />
+            <span className="font-serif text-base sm:text-lg text-charcoal leading-none truncate">
               {client?.displayName ?? "Dashboard"}
             </span>
           </div>

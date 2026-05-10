@@ -119,12 +119,15 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
       ) : null}
 
       {/* Title */}
-      <section className="flex items-start justify-between gap-4">
+      <section className="flex items-center justify-between gap-4">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1.5">
             Daily EOI Tracker
           </p>
-          <h1 className="font-serif text-3xl text-charcoal">Expression of Interest Report</h1>
+          <h1 className="font-serif text-3xl text-charcoal">
+            <span className="sm:hidden">EOI Report</span>
+            <span className="hidden sm:inline">Expression of Interest Report</span>
+          </h1>
           <p className="text-sm text-slate-700 mt-1">
             {formatDateRange(data.upload.dateMin, data.upload.dateMax)} ·{" "}
             {data.totals.activeDays} active days · last published{" "}
@@ -191,19 +194,26 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
 
         <Divider />
 
-        <Group label="Status">
-          {(["approved", "pending", "rejected", "canceled"] as const).map((s) => (
-            <Chip
-              key={s}
-              active={statuses.includes(s)}
-              onClick={() =>
-                setStatuses((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
-              }
-            >
-              {capitalize(s)}
-            </Chip>
-          ))}
-        </Group>
+        <div className="flex items-start sm:items-center gap-1.5">
+          <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 mr-1 mt-1.5 sm:mt-0">
+            Status
+          </span>
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap">
+            {(["approved", "pending", "rejected", "canceled"] as const).map((s) => (
+              <Chip
+                key={s}
+                active={statuses.includes(s)}
+                onClick={() =>
+                  setStatuses((prev) =>
+                    prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+                  )
+                }
+              >
+                {capitalize(s)}
+              </Chip>
+            ))}
+          </div>
+        </div>
 
         <Divider />
 

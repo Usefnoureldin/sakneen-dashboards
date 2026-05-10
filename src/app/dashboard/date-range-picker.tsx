@@ -45,7 +45,17 @@ function recentMonths(min: string, max: string, n: number) {
 
 export function DateRangePicker({ start, end, min, max, onChange }: Props) {
   const [open, setOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  // Track viewport width so we can show 1 month on mobile, 2 on desktop.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const months = useMemo(() => recentMonths(min, max, 6), [min, max]);
   const minDate = fromISO(min)!;
@@ -107,7 +117,13 @@ export function DateRangePicker({ start, end, min, max, onChange }: Props) {
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-full mt-2 z-40 rounded-xl border border-slate-200 bg-white shadow-lg p-4 min-w-[640px]">
+        <div
+          className={`z-40 rounded-xl border border-slate-200 bg-white shadow-lg p-4 ${
+            isDesktop
+              ? "absolute left-0 top-full mt-2 min-w-[640px]"
+              : "fixed inset-x-4 top-24 max-h-[calc(100vh-7rem)] overflow-y-auto"
+          }`}
+        >
           <div className="mb-3">
             <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 mb-2">
               Quick select month
@@ -135,7 +151,7 @@ export function DateRangePicker({ start, end, min, max, onChange }: Props) {
 
           <DayPicker
             mode="range"
-            numberOfMonths={2}
+            numberOfMonths={isDesktop ? 2 : 1}
             selected={range}
             onSelect={handleSelect}
             disabled={{ before: minDate, after: maxDate }}
