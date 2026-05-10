@@ -49,6 +49,8 @@ yarn-error.log*
 
 # Local secrets — never commit
 /secrets/
+*password*
+*credentials*
 
 # vercel
 .vercel
