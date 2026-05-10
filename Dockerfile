@@ -10,7 +10,7 @@ RUN corepack enable
 # =========== deps ===========
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # =========== builder ===========
@@ -42,7 +42,7 @@ ENV PORT=3000
 
 # Install all deps (dev included so drizzle-kit/tsx are available for migrate scripts)
 # + the Playwright Chromium binary.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 RUN pnpm exec playwright install --with-deps chromium
 
