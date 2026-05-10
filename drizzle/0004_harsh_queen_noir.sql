@@ -1,0 +1,1 @@
+ALTER TABLE "eoi_uploads" ADD COLUMN "pdf_path" text;

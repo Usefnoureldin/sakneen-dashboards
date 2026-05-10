@@ -235,7 +235,7 @@ body {
 /* STATUS */
 .status-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -254,6 +254,9 @@ body {
 }
 .status-rejected {
   border-top-color: var(--color-status-rejected);
+}
+.status-canceled {
+  border-top-color: var(--color-status-canceled);
 }
 .status-pill {
   display: inline-block;
@@ -277,6 +280,10 @@ body {
 .pill-rejected {
   background: var(--color-pill-rejected-bg);
   color: var(--color-pill-rejected-fg);
+}
+.pill-canceled {
+  background: var(--color-pill-canceled-bg);
+  color: var(--color-pill-canceled-fg);
 }
 .status-pct {
   font-family: var(--font-serif);

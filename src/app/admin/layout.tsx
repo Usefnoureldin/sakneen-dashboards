@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { requireActiveSession } from "@/lib/session-guard";
@@ -9,12 +10,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-warm-cream">
       <header className="border-b border-slate-200 bg-white/60 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-baseline gap-5">
-            <Link
-              href="/admin"
-              className="font-sans font-bold text-xl text-sakneen-blue tracking-tight hover:opacity-80"
-            >
-              sakneen
+          <div className="flex items-center gap-5">
+            <Link href="/admin" className="hover:opacity-80 inline-flex items-center">
+              <Image
+                src="/logo/sakneen-logo.png"
+                alt="Sakneen"
+                width={107}
+                height={32}
+                priority
+                className="h-8 w-auto"
+              />
             </Link>
             <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-slate-500">
               Admin

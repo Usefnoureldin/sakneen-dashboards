@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { signOut } from "@/auth";
@@ -35,6 +36,11 @@ export default async function DashboardHome() {
           unitType: eoiRecords.unitType,
           status: eoiRecords.status,
           amountEgp: eoiRecords.amountEgp,
+          bulkEoiId: eoiRecords.bulkEoiId,
+          eoiCategory: eoiRecords.eoiCategory,
+          eoiSource: eoiRecords.eoiSource,
+          nationality: eoiRecords.nationality,
+          brokerageName: eoiRecords.brokerageName,
         })
         .from(eoiRecords)
         .where(eq(eoiRecords.uploadId, latestPublished.id))
@@ -48,8 +54,13 @@ export default async function DashboardHome() {
           records: records.map((r) => ({
             eoiDate: String(r.eoiDate),
             unitType: r.unitType as "Residential" | "Admin",
-            status: r.status as "approved" | "pending" | "rejected",
+            status: r.status as "approved" | "pending" | "rejected" | "canceled",
             amountEgp: Number(r.amountEgp),
+            bulkEoiId: r.bulkEoiId,
+            eoiCategory: r.eoiCategory,
+            eoiSource: r.eoiSource,
+            nationality: r.nationality,
+            brokerageName: r.brokerageName,
           })),
         })
       : null;
@@ -58,10 +69,15 @@ export default async function DashboardHome() {
     <div className="min-h-screen bg-warm-cream">
       <header className="border-b border-slate-200 bg-white/60 backdrop-blur">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-baseline gap-3">
-            <span className="font-sans font-bold text-xl text-sakneen-blue tracking-tight">
-              sakneen
-            </span>
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo/sakneen-logo.png"
+              alt="Sakneen"
+              width={107}
+              height={32}
+              priority
+              className="h-8 w-auto"
+            />
             <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-slate-500">
               {client?.displayName ?? "Dashboard"}
             </span>

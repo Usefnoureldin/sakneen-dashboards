@@ -38,6 +38,12 @@ yarn-error.log*
 /uploads/
 /data/
 
+# real customer Excel exports kept locally for testing
+/excel_uploads/
+
+# generated PDF reports (real customer data)
+/public/*.pdf
+
 # Railway local cache
 .railway/
 

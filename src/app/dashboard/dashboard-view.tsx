@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   applyFilters,
@@ -18,11 +19,17 @@ import {
   formatValueLong,
   formatValueShort,
 } from "@/lib/format";
-import { DailyBarChart, StatusDoughnut, TypeCompositionBar } from "./charts";
+import {
+  BrokersBarChart,
+  BulkBucketsChart,
+  DailyBarChart,
+  StatusDoughnut,
+  TypeCompositionBar,
+} from "./charts";
 import { DownloadPdfButton } from "./download-pdf-button";
 import { DetailModal, type DetailKey } from "./detail-modal";
 
-type SortKey = "date" | "count" | "value" | "approved" | "pending" | "rejected";
+type SortKey = "date" | "count" | "value" | "approved" | "pending" | "rejected" | "canceled";
 
 export function DashboardView({ initial }: { initial: DashboardData }) {
   // Live data: starts as the server-rendered initial, refreshes via polling.
@@ -37,6 +44,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
   const [types, setTypes] = useState<UnitType[]>([]);
   const [valueMode, setValueMode] = useState<"count" | "value">("count");
   const [stacked, setStacked] = useState(false);
+  const [bulkMetric, setBulkMetric] = useState<"groups" | "value">("groups");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "date",
     dir: "asc",
@@ -180,7 +188,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
         <Divider />
 
         <Group label="Status">
-          {(["approved", "pending", "rejected"] as const).map((s) => (
+          {(["approved", "pending", "rejected", "canceled"] as const).map((s) => (
             <Chip
               key={s}
               active={statuses.includes(s)}
@@ -280,11 +288,11 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
         <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1">
           Status Distribution
         </p>
-        <h2 className="font-serif text-xl text-charcoal">Approved · Pending · Rejected</h2>
+        <h2 className="font-serif text-xl text-charcoal">Approved, Pending, Rejected, Canceled</h2>
         <p className="text-sm text-slate-600 mt-0.5 mb-3">
           Status mix across the current selection.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatusCard
             label="Approved"
             count={data.statusBreakdown.approved.count}
@@ -309,6 +317,14 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
             tone="rejected"
             onClick={() => setOpenDetail("rejected")}
           />
+          <StatusCard
+            label="Canceled"
+            count={data.statusBreakdown.canceled.count}
+            value={data.statusBreakdown.canceled.value}
+            total={data.totals.totalCount}
+            tone="canceled"
+            onClick={() => setOpenDetail("canceled")}
+          />
         </div>
         <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
           <p className="font-mono text-[10px] uppercase tracking-[1.5px] text-slate-500 mb-2">
@@ -318,6 +334,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
             approved={data.statusBreakdown.approved.count}
             pending={data.statusBreakdown.pending.count}
             rejected={data.statusBreakdown.rejected.count}
+            canceled={data.statusBreakdown.canceled.count}
           />
         </div>
       </section>
@@ -402,6 +419,101 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
         </div>
       </section>
 
+      {/* Channel mix: Direct vs Indirect with sources */}
+      <section>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1">
+          Channel Mix
+        </p>
+        <h2 className="font-serif text-xl text-charcoal">Direct vs Indirect</h2>
+        <p className="text-sm text-slate-600 mt-0.5 mb-3">
+          Where the EOIs came from. Each channel breaks down by source.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ChannelCard
+            label="Direct"
+            featured
+            total={data.totals.totalCount}
+            entry={data.directVsIndirect.Direct}
+          />
+          <ChannelCard
+            label="Indirect"
+            total={data.totals.totalCount}
+            entry={data.directVsIndirect.Indirect}
+          />
+        </div>
+      </section>
+
+      {/* Nationality */}
+      <section>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1">
+          Nationality
+        </p>
+        <h2 className="font-serif text-xl text-charcoal">EOIs by Nationality</h2>
+        <p className="text-sm text-slate-600 mt-0.5 mb-3">
+          Top nationalities by count, with value and share of total.
+        </p>
+        <NationalityTable
+          rows={data.nationalityBreakdown}
+          totalCount={data.totals.totalCount}
+        />
+      </section>
+
+      {/* Bulk units */}
+      <section>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1">
+          Bulk Units
+        </p>
+        <h2 className="font-serif text-xl text-charcoal">Bulk EOI segmentation</h2>
+        <p className="text-sm text-slate-600 mt-0.5 mb-3">
+          {formatCount(data.bulkTotals.groups)} bulk groups across{" "}
+          {formatCount(data.bulkTotals.units)} units, segmented by group size.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+          {data.bulkSegments.map((seg) => (
+            <BulkBucketCard
+              key={seg.bucket}
+              label={`${seg.bucket} unit${seg.bucket === "1" ? "" : "s"}`}
+              groups={seg.groups}
+              units={seg.units}
+              value={seg.value}
+              totalGroups={data.bulkTotals.groups}
+              onClick={() => setOpenDetail(`bulk:${seg.bucket}` as DetailKey)}
+            />
+          ))}
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-serif text-base text-charcoal">
+              {bulkMetric === "groups" ? "Groups per segment" : "Total value per segment"}
+            </p>
+            <div className="flex gap-1.5">
+              <Toggle active={bulkMetric === "groups"} onClick={() => setBulkMetric("groups")}>
+                Groups
+              </Toggle>
+              <Toggle active={bulkMetric === "value"} onClick={() => setBulkMetric("value")}>
+                Value
+              </Toggle>
+            </div>
+          </div>
+          <BulkBucketsChart data={data.bulkSegments} metric={bulkMetric} />
+        </div>
+      </section>
+
+      {/* Broker performance */}
+      <section>
+        <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1">
+          Broker Performance
+        </p>
+        <h2 className="font-serif text-xl text-charcoal">Top brokers by EOI count</h2>
+        <p className="text-sm text-slate-600 mt-0.5 mb-3">
+          Top 10 brokers by EOI count. Blank brokerage cells are grouped as Direct (in-house).
+          Remaining brokers rolled into &quot;Other&quot;.
+        </p>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <BrokersBarChart data={data.brokerPerformance} />
+        </div>
+      </section>
+
       {/* Daily ledger */}
       <section>
         <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1">
@@ -416,8 +528,15 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
       </section>
 
       <footer className="pt-6 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
-        <span>
-          <span className="font-sans font-bold text-sakneen-blue">sakneen</span> · {data.client.displayName}
+        <span className="inline-flex items-center gap-2">
+          <Image
+            src="/logo/sakneen-logo.png"
+            alt="Sakneen"
+            width={67}
+            height={20}
+            className="h-5 w-auto"
+          />
+          <span>· {data.client.displayName}</span>
         </span>
         <span>Last updated {formatTimestamp(data.upload.publishedAt)}</span>
       </footer>
@@ -531,17 +650,25 @@ function StatusCard({
   count: number;
   value: number;
   total: number;
-  tone: "approved" | "pending" | "rejected";
+  tone: "approved" | "pending" | "rejected" | "canceled";
   onClick?: () => void;
 }) {
   const accent =
-    tone === "approved" ? "bg-status-approved" : tone === "pending" ? "bg-status-pending" : "bg-status-rejected";
+    tone === "approved"
+      ? "bg-status-approved"
+      : tone === "pending"
+        ? "bg-status-pending"
+        : tone === "rejected"
+          ? "bg-status-rejected"
+          : "bg-status-canceled";
   const pill =
     tone === "approved"
       ? "bg-pill-approved-bg text-pill-approved-fg"
       : tone === "pending"
         ? "bg-pill-pending-bg text-pill-pending-fg"
-        : "bg-pill-rejected-bg text-pill-rejected-fg";
+        : tone === "rejected"
+          ? "bg-pill-rejected-bg text-pill-rejected-fg"
+          : "bg-pill-canceled-bg text-pill-canceled-fg";
   return (
     <button
       type="button"
@@ -673,6 +800,10 @@ function Ledger({
           av = a.rejectedCount;
           bv = b.rejectedCount;
           break;
+        case "canceled":
+          av = a.canceledCount;
+          bv = b.canceledCount;
+          break;
       }
       const cmp = av < bv ? -1 : av > bv ? 1 : 0;
       return sort.dir === "asc" ? cmp : -cmp;
@@ -684,6 +815,7 @@ function Ledger({
   const totalApproved = daily.reduce((s, d) => s + d.approvedCount, 0);
   const totalPending = daily.reduce((s, d) => s + d.pendingCount, 0);
   const totalRejected = daily.reduce((s, d) => s + d.rejectedCount, 0);
+  const totalCanceled = daily.reduce((s, d) => s + d.canceledCount, 0);
 
   function H({ k, label, alignRight }: { k: SortKey; label: string; alignRight?: boolean }) {
     const active = sort.key === k;
@@ -714,6 +846,7 @@ function Ledger({
             <H k="approved" label="Approved" alignRight />
             <H k="pending" label="Pending" alignRight />
             <H k="rejected" label="Rejected" alignRight />
+            <H k="canceled" label="Canceled" alignRight />
           </tr>
         </thead>
         <tbody>
@@ -732,6 +865,9 @@ function Ledger({
               </td>
               <td className="px-4 py-2 text-right tabular-nums text-status-rejected">
                 {formatCount(d.rejectedCount)}
+              </td>
+              <td className="px-4 py-2 text-right tabular-nums text-status-canceled">
+                {formatCount(d.canceledCount)}
               </td>
             </tr>
           ))}
@@ -756,10 +892,185 @@ function Ledger({
             <td className="px-4 py-2 text-right tabular-nums font-semibold text-status-rejected">
               {formatCount(totalRejected)}
             </td>
+            <td className="px-4 py-2 text-right tabular-nums font-semibold text-status-canceled">
+              {formatCount(totalCanceled)}
+            </td>
           </tr>
         </tfoot>
       </table>
     </div>
+  );
+}
+
+function ChannelCard({
+  label,
+  featured,
+  total,
+  entry,
+}: {
+  label: "Direct" | "Indirect";
+  featured?: boolean;
+  total: number;
+  entry: import("@/lib/aggregations").CategoryBreakdown;
+}) {
+  return (
+    <div
+      className={`rounded-xl p-5 ${
+        featured ? "bg-warm-cream" : "bg-white border border-slate-200"
+      }`}
+    >
+      <div className="flex items-baseline justify-between">
+        <p className="font-serif text-xl text-charcoal">{label}</p>
+        <span
+          className={`font-mono text-[9px] uppercase tracking-[1.5px] px-2 py-0.5 rounded ${
+            featured ? "bg-terracotta text-white" : "bg-slate-100 text-slate-700"
+          }`}
+        >
+          {label === "Direct" ? "In-house" : "Via brokers"}
+        </span>
+      </div>
+      <p className="font-serif text-5xl text-charcoal mt-3">{formatPercent(entry.count, total)}</p>
+      <p className="text-sm text-slate-600 mt-0.5">
+        {formatCount(entry.count)} EOIs · {formatValueShort(entry.value)}
+      </p>
+      {/* For Direct: show source breakdown (Self-generated, Ambassador, etc).
+          For Indirect: source is always "Broker", so show top 5 brokers instead. */}
+      {label === "Indirect" && entry.topBrokers.length > 0 ? (
+        <div className="mt-4 border-t border-slate-200 pt-3">
+          <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 mb-2">
+            Top brokers
+          </p>
+          <ul className="space-y-1.5">
+            {entry.topBrokers.map((b) => (
+              <li key={b.name} className="flex items-baseline justify-between text-sm gap-3">
+                <span className="text-charcoal truncate">{b.name}</span>
+                <span className="text-slate-500 tabular-nums shrink-0">
+                  {formatCount(b.count)}{" "}
+                  <span className="text-slate-400">({formatPercent(b.count, entry.count)})</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : entry.sources.length > 0 ? (
+        <div className="mt-4 border-t border-slate-200 pt-3">
+          <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 mb-2">
+            Sources
+          </p>
+          <ul className="space-y-1.5">
+            {entry.sources.map((s) => (
+              <li key={s.name} className="flex items-baseline justify-between text-sm">
+                <span className="text-charcoal">{s.name}</span>
+                <span className="text-slate-500 tabular-nums">
+                  {formatCount(s.count)}{" "}
+                  <span className="text-slate-400">({formatPercent(s.count, entry.count)})</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NationalityTable({
+  rows,
+  totalCount,
+}: {
+  rows: import("@/lib/aggregations").NationalityRow[];
+  totalCount: number;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-slate-50">
+          <tr>
+            <th className="px-4 py-2 font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 text-left">
+              Nationality
+            </th>
+            <th className="px-4 py-2 font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 text-right">
+              Count
+            </th>
+            <th className="px-4 py-2 font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 text-right">
+              Value
+            </th>
+            <th className="px-4 py-2 font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 text-right">
+              Share
+            </th>
+            <th className="px-4 py-2 font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500 text-left w-[35%]">
+              Distribution
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const pct = totalCount === 0 ? 0 : (r.count / totalCount) * 100;
+            return (
+              <tr key={r.name} className="border-t border-slate-100">
+                <td className="px-4 py-2">{r.name}</td>
+                <td className="px-4 py-2 text-right tabular-nums font-semibold">
+                  {formatCount(r.count)}
+                </td>
+                <td className="px-4 py-2 text-right tabular-nums">{formatValueShort(r.value)}</td>
+                <td className="px-4 py-2 text-right tabular-nums text-slate-600">
+                  {pct.toFixed(1)}%
+                </td>
+                <td className="px-4 py-2">
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-sakneen-blue rounded-full"
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function BulkBucketCard({
+  label,
+  groups,
+  units,
+  value,
+  totalGroups,
+  onClick,
+}: {
+  label: string;
+  groups: number;
+  units: number;
+  value: number;
+  totalGroups: number;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={groups === 0}
+      className="text-left rounded-xl border border-slate-200 bg-white p-3 transition-all cursor-pointer hover:border-slate-300 hover:shadow-sm hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-sakneen-blue/40 disabled:opacity-50 disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-none"
+    >
+      <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500">{label}</p>
+      <p className="font-serif text-2xl text-charcoal mt-1">{formatCount(groups)}</p>
+      <p className="text-[11px] text-slate-500">
+        groups · {formatPercent(groups, totalGroups)}
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-1 text-[11px]">
+        <div>
+          <p className="text-slate-500">Units</p>
+          <p className="tabular-nums font-semibold">{formatCount(units)}</p>
+        </div>
+        <div>
+          <p className="text-slate-500">Value</p>
+          <p className="tabular-nums font-semibold">{formatValueShort(value, false)}</p>
+        </div>
+      </div>
+    </button>
   );
 }
 

@@ -13,6 +13,8 @@ import {
 } from "@/lib/format";
 import { verifyPdfToken } from "@/lib/pdf-token";
 import {
+  PrintBrokersChart,
+  PrintBulkChart,
   PrintDailyChart,
   PrintReadyMarker,
   PrintStatusDoughnut,
@@ -48,6 +50,11 @@ export default async function PrintReport({
       unitType: eoiRecords.unitType,
       status: eoiRecords.status,
       amountEgp: eoiRecords.amountEgp,
+      bulkEoiId: eoiRecords.bulkEoiId,
+      eoiCategory: eoiRecords.eoiCategory,
+      eoiSource: eoiRecords.eoiSource,
+      nationality: eoiRecords.nationality,
+      brokerageName: eoiRecords.brokerageName,
     })
     .from(eoiRecords)
     .where(and(eq(eoiRecords.uploadId, uploadId), eq(eoiRecords.clientId, client.id)));
@@ -58,8 +65,13 @@ export default async function PrintReport({
     records: records.map((r) => ({
       eoiDate: String(r.eoiDate),
       unitType: r.unitType as "Residential" | "Admin",
-      status: r.status as "approved" | "pending" | "rejected",
+      status: r.status as "approved" | "pending" | "rejected" | "canceled",
       amountEgp: Number(r.amountEgp),
+      bulkEoiId: r.bulkEoiId,
+      eoiCategory: r.eoiCategory,
+      eoiSource: r.eoiSource,
+      nationality: r.nationality,
+      brokerageName: r.brokerageName,
     })),
   });
 
@@ -67,6 +79,7 @@ export default async function PrintReport({
   const totalApproved = data.statusBreakdown.approved.count;
   const totalPending = data.statusBreakdown.pending.count;
   const totalRejected = data.statusBreakdown.rejected.count;
+  const totalCanceled = data.statusBreakdown.canceled.count;
 
   return (
     <div className="print-root">
@@ -152,7 +165,7 @@ export default async function PrintReport({
         </div>
 
         <p className="section-eyebrow mt-md">Status Distribution</p>
-        <h3 className="section-title-sm">Approved · Pending · Rejected</h3>
+        <h3 className="section-title-sm">Approved, Pending, Rejected, Canceled</h3>
         <p className="section-sub">Status mix across the full reporting window.</p>
 
         <div className="status-grid">
@@ -177,6 +190,13 @@ export default async function PrintReport({
             value={data.statusBreakdown.rejected.value}
             total={data.totals.totalCount}
           />
+          <StatusCard
+            label="Canceled"
+            tone="canceled"
+            count={totalCanceled}
+            value={data.statusBreakdown.canceled.value}
+            total={data.totals.totalCount}
+          />
         </div>
 
         <div className="chart-block">
@@ -186,6 +206,7 @@ export default async function PrintReport({
             approved={totalApproved}
             pending={totalPending}
             rejected={totalRejected}
+            canceled={totalCanceled}
           />
         </div>
 
@@ -221,7 +242,7 @@ export default async function PrintReport({
       <section className="page">
         <PrintHeader client={client.displayName} pageNumber={4} />
         <p className="section-eyebrow">Daily Activity by Status</p>
-        <h2 className="section-title">Stacked View · Approved · Pending · Rejected</h2>
+        <h2 className="section-title">Stacked View, Approved, Pending, Rejected, Canceled</h2>
         <p className="section-sub">
           Same daily timeline broken down by status. Useful for spotting days with high rejection
           or pending backlog.
@@ -281,9 +302,150 @@ export default async function PrintReport({
         <PrintFooter pageNumber={5} client={client.displayName} />
       </section>
 
-      {/* PAGE 6 — Daily Ledger */}
+      {/* PAGE 6 — Channel Mix (Direct vs Indirect with Sources) */}
       <section className="page">
         <PrintHeader client={client.displayName} pageNumber={6} />
+        <p className="section-eyebrow">Channel Mix</p>
+        <h2 className="section-title">Direct vs Indirect</h2>
+        <p className="section-sub">
+          Where the EOIs came from, with per-source breakdown inside each channel.
+        </p>
+
+        <div className="type-grid">
+          <PrintChannelCard
+            label="Direct"
+            featured
+            entry={data.directVsIndirect.Direct}
+            total={data.totals.totalCount}
+          />
+          <PrintChannelCard
+            label="Indirect"
+            entry={data.directVsIndirect.Indirect}
+            total={data.totals.totalCount}
+          />
+        </div>
+
+        <PrintFooter pageNumber={6} client={client.displayName} />
+      </section>
+
+      {/* PAGE 7 — Nationality */}
+      <section className="page">
+        <PrintHeader client={client.displayName} pageNumber={7} />
+        <p className="section-eyebrow">Nationality</p>
+        <h2 className="section-title">EOIs by Nationality</h2>
+        <p className="section-sub">
+          Top nationalities by count, with value and share of total.
+        </p>
+
+        <table className="ledger">
+          <thead>
+            <tr>
+              <th>Nationality</th>
+              <th className="right">Count</th>
+              <th className="right">Value (EGP)</th>
+              <th className="right">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.nationalityBreakdown.map((n) => (
+              <tr key={n.name}>
+                <td>{n.name}</td>
+                <td className="right tabular">{formatCount(n.count)}</td>
+                <td className="right tabular">{formatCount(n.value)}</td>
+                <td className="right tabular">{formatPercent(n.count, data.totals.totalCount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <PrintFooter pageNumber={7} client={client.displayName} />
+      </section>
+
+      {/* PAGE 8 — Bulk Units */}
+      <section className="page">
+        <PrintHeader client={client.displayName} pageNumber={8} />
+        <p className="section-eyebrow">Bulk Units</p>
+        <h2 className="section-title">Bulk EOI segmentation</h2>
+        <p className="section-sub">
+          {formatCount(data.bulkTotals.groups)} bulk groups across{" "}
+          {formatCount(data.bulkTotals.units)} units, segmented by group size.
+        </p>
+
+        <table className="ledger">
+          <thead>
+            <tr>
+              <th>Group size</th>
+              <th className="right">Groups</th>
+              <th className="right">Units</th>
+              <th className="right">Value (EGP)</th>
+              <th className="right">Share of groups</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.bulkSegments.map((s) => (
+              <tr key={s.bucket}>
+                <td>{s.bucket} unit{s.bucket === "1" ? "" : "s"}</td>
+                <td className="right tabular">{formatCount(s.groups)}</td>
+                <td className="right tabular">{formatCount(s.units)}</td>
+                <td className="right tabular">{formatCount(s.value)}</td>
+                <td className="right tabular">
+                  {formatPercent(s.groups, data.bulkTotals.groups)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="chart-block">
+          <p className="chart-title">Groups per segment</p>
+          <p className="chart-sub">Number of bulk EOI groups in each size band</p>
+          <PrintBulkChart data={data.bulkSegments} metric="groups" height={180} />
+        </div>
+
+        <PrintFooter pageNumber={8} client={client.displayName} />
+      </section>
+
+      {/* PAGE 9 — Broker Performance */}
+      <section className="page">
+        <PrintHeader client={client.displayName} pageNumber={9} />
+        <p className="section-eyebrow">Broker Performance</p>
+        <h2 className="section-title">Top brokers by EOI count</h2>
+        <p className="section-sub">
+          Top 10 brokers by EOI count. Blank brokerage cells are grouped as Direct (in-house).
+          Remaining brokers rolled into &quot;Other&quot;.
+        </p>
+
+        <div className="chart-block">
+          <PrintBrokersChart data={data.brokerPerformance} />
+        </div>
+
+        <table className="ledger">
+          <thead>
+            <tr>
+              <th>Broker</th>
+              <th className="right">Count</th>
+              <th className="right">Value (EGP)</th>
+              <th className="right">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.brokerPerformance.map((b) => (
+              <tr key={b.name}>
+                <td>{b.name}</td>
+                <td className="right tabular">{formatCount(b.count)}</td>
+                <td className="right tabular">{formatCount(b.value)}</td>
+                <td className="right tabular">{formatPercent(b.count, data.totals.totalCount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <PrintFooter pageNumber={9} client={client.displayName} />
+      </section>
+
+      {/* PAGE 10 — Daily Ledger */}
+      <section className="page">
+        <PrintHeader client={client.displayName} pageNumber={10} />
         <p className="section-eyebrow">Detail</p>
         <h2 className="section-title">Daily EOI Ledger</h2>
         <p className="section-sub">
@@ -300,6 +462,7 @@ export default async function PrintReport({
               <th className="right">Approved</th>
               <th className="right">Pending</th>
               <th className="right">Rejected</th>
+              <th className="right">Canceled</th>
             </tr>
           </thead>
           <tbody>
@@ -311,6 +474,7 @@ export default async function PrintReport({
                 <td className="right tabular">{formatCount(d.approvedCount)}</td>
                 <td className="right tabular">{formatCount(d.pendingCount)}</td>
                 <td className="right tabular">{formatCount(d.rejectedCount)}</td>
+                <td className="right tabular">{formatCount(d.canceledCount)}</td>
               </tr>
             ))}
             <tr className="total">
@@ -320,11 +484,12 @@ export default async function PrintReport({
               <td className="right tabular">{formatCount(totalApproved)}</td>
               <td className="right tabular">{formatCount(totalPending)}</td>
               <td className="right tabular">{formatCount(totalRejected)}</td>
+              <td className="right tabular">{formatCount(totalCanceled)}</td>
             </tr>
           </tbody>
         </table>
 
-        <PrintFooter pageNumber={6} client={client.displayName} />
+        <PrintFooter pageNumber={10} client={client.displayName} />
       </section>
 
       <PrintReadyMarker />
@@ -374,7 +539,7 @@ function StatusCard({
   total,
 }: {
   label: string;
-  tone: "approved" | "pending" | "rejected";
+  tone: "approved" | "pending" | "rejected" | "canceled";
   count: number;
   value: number;
   total: number;
@@ -428,6 +593,72 @@ function TypeCard({
           <p className="type-meta-value">{formatValueShort(value, false)}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PrintChannelCard({
+  label,
+  featured,
+  entry,
+  total,
+}: {
+  label: "Direct" | "Indirect";
+  featured?: boolean;
+  entry: import("@/lib/aggregations").CategoryBreakdown;
+  total: number;
+}) {
+  return (
+    <div className={`type-card ${featured ? "type-featured" : ""}`}>
+      <div className="type-head">
+        <p className="type-label">{label}</p>
+        <span className={`type-tag ${featured ? "tag-featured" : ""}`}>
+          {label === "Direct" ? "IN-HOUSE" : "VIA BROKERS"}
+        </span>
+      </div>
+      <p className="type-pct">{formatPercent(entry.count, total)}</p>
+      <p className="type-of">
+        {formatCount(entry.count)} EOIs · {formatValueShort(entry.value)}
+      </p>
+      {label === "Indirect" && entry.topBrokers.length > 0 ? (
+        <table className="ledger" style={{ marginTop: 12 }}>
+          <thead>
+            <tr>
+              <th>Top brokers</th>
+              <th className="right">Count</th>
+              <th className="right">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entry.topBrokers.map((b) => (
+              <tr key={b.name}>
+                <td>{b.name}</td>
+                <td className="right tabular">{formatCount(b.count)}</td>
+                <td className="right tabular">{formatPercent(b.count, entry.count)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : entry.sources.length > 0 ? (
+        <table className="ledger" style={{ marginTop: 12 }}>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th className="right">Count</th>
+              <th className="right">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entry.sources.map((s) => (
+              <tr key={s.name}>
+                <td>{s.name}</td>
+                <td className="right tabular">{formatCount(s.count)}</td>
+                <td className="right tabular">{formatPercent(s.count, entry.count)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
     </div>
   );
 }

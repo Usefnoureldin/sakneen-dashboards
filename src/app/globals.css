@@ -17,6 +17,7 @@
   --color-status-approved: #4FB54E;
   --color-status-pending: #F59E0B;
   --color-status-rejected: #C84B31;
+  --color-status-canceled: #6B7280;
 
   --color-pill-approved-bg: #E8F8E8;
   --color-pill-approved-fg: #2E7B2E;
@@ -24,6 +25,8 @@
   --color-pill-pending-fg: #92400E;
   --color-pill-rejected-bg: #FBE5DD;
   --color-pill-rejected-fg: #8B2A1B;
+  --color-pill-canceled-bg: #EEF1F6;
+  --color-pill-canceled-fg: #374151;
 
   --color-slate-50: #F8F9FB;
   --color-slate-100: #EEF1F6;
@@ -46,6 +49,7 @@
   --color-status-approved: var(--color-status-approved);
   --color-status-pending: var(--color-status-pending);
   --color-status-rejected: var(--color-status-rejected);
+  --color-status-canceled: var(--color-status-canceled);
 
   --color-pill-approved-bg: var(--color-pill-approved-bg);
   --color-pill-approved-fg: var(--color-pill-approved-fg);
@@ -53,6 +57,8 @@
   --color-pill-pending-fg: var(--color-pill-pending-fg);
   --color-pill-rejected-bg: var(--color-pill-rejected-bg);
   --color-pill-rejected-fg: var(--color-pill-rejected-fg);
+  --color-pill-canceled-bg: var(--color-pill-canceled-bg);
+  --color-pill-canceled-fg: var(--color-pill-canceled-fg);
 
   --color-slate-50: var(--color-slate-50);
   --color-slate-100: var(--color-slate-100);

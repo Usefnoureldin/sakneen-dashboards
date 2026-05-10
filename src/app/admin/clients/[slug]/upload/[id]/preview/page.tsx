@@ -87,6 +87,7 @@ export default async function UploadPreview({
         approved={await countByStatus(upload.id, "approved")}
         pending={await countByStatus(upload.id, "pending")}
         rejected={await countByStatus(upload.id, "rejected")}
+        canceled={await countByStatus(upload.id, "canceled")}
         total={totalCount}
       />
 
@@ -117,7 +118,10 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-async function countByStatus(uploadId: string, status: "approved" | "pending" | "rejected") {
+async function countByStatus(
+  uploadId: string,
+  status: "approved" | "pending" | "rejected" | "canceled",
+) {
   const { db } = await import("@/db");
   const { eoiRecords } = await import("@/db/schema");
   const { sql, and, eq } = await import("drizzle-orm");
@@ -143,6 +147,7 @@ function StatusBreakdown(props: {
   approved: number;
   pending: number;
   rejected: number;
+  canceled: number;
   total: number;
 }) {
   const cards: Array<{
@@ -177,10 +182,18 @@ function StatusBreakdown(props: {
       pillFg: "text-pill-rejected-fg",
       accent: "bg-status-rejected",
     },
+    {
+      label: "Canceled",
+      n: props.canceled,
+      border: "border-status-canceled",
+      pillBg: "bg-pill-canceled-bg",
+      pillFg: "text-pill-canceled-fg",
+      accent: "bg-status-canceled",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {cards.map((c) => (
         <div key={c.label} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className={`h-1 ${c.accent}`} />

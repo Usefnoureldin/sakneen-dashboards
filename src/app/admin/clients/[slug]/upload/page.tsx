@@ -22,8 +22,9 @@ export default async function UploadPage({
       </p>
       <h1 className="font-serif text-3xl text-charcoal mb-6">Upload daily EOI export</h1>
       <p className="text-sm text-slate-600 mb-6">
-        Drop the standardized Excel export. The parser will validate it strictly. Once parsed, you
-        will see a preview before publishing.
+        Drop the daily Sakneen EOI export. The parser maps columns by name (Number of EOI, Unit
+        Type, Status, Timestamp, EOI Value) and accepts both serial and text dates. Rows missing
+        unit type or with an unsupported status are dropped and reported in the preview.
       </p>
       <UploadForm slug={client.slug} />
     </main>

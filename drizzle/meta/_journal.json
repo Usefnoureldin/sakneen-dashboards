@@ -8,6 +8,34 @@
       "when": 1778308314928,
       "tag": "0000_next_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778423047911,
+      "tag": "0001_spotty_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778424527843,
+      "tag": "0002_nappy_texas_twister",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778425078635,
+      "tag": "0003_fast_jazinda",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778425954439,
+      "tag": "0004_harsh_queen_noir",
+      "breakpoints": true
     }
   ]
 }

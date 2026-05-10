@@ -1,0 +1,2 @@
+ALTER TABLE "eoi_records" DROP CONSTRAINT "eoi_records_status_check";--> statement-breakpoint
+ALTER TABLE "eoi_records" ADD CONSTRAINT "eoi_records_status_check" CHECK ("eoi_records"."status" IN ('approved', 'pending', 'rejected', 'canceled'));

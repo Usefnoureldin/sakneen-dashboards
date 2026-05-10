@@ -1,0 +1,1 @@
+ALTER TABLE "eoi_records" ALTER COLUMN "bulk_eoi_id" SET DATA TYPE text;

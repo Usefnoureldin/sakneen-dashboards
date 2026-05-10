@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "./login-form";
@@ -20,9 +21,16 @@ export default async function LoginPage({
   return (
     <main className="min-h-screen bg-warm-cream flex items-center justify-center p-6">
       <div className="w-full max-w-[400px]">
-        <h1 className="font-sans font-bold text-3xl text-sakneen-blue tracking-tight mb-8 text-center">
-          sakneen
-        </h1>
+        <div className="mb-8 flex justify-center">
+          <Image
+            src="/logo/sakneen-logo.png"
+            alt="Sakneen"
+            width={200}
+            height={60}
+            priority
+            className="h-12 w-auto"
+          />
+        </div>
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="font-mono text-[10px] uppercase tracking-[2px] text-terracotta mb-1.5">
             EOI Analytics Dashboard

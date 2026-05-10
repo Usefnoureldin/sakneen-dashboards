@@ -38,6 +38,11 @@ export async function GET() {
       unitType: eoiRecords.unitType,
       status: eoiRecords.status,
       amountEgp: eoiRecords.amountEgp,
+      bulkEoiId: eoiRecords.bulkEoiId,
+      eoiCategory: eoiRecords.eoiCategory,
+      eoiSource: eoiRecords.eoiSource,
+      nationality: eoiRecords.nationality,
+      brokerageName: eoiRecords.brokerageName,
     })
     .from(eoiRecords)
     .where(eq(eoiRecords.uploadId, upload.id));
@@ -48,8 +53,13 @@ export async function GET() {
     records: records.map((r) => ({
       eoiDate: String(r.eoiDate),
       unitType: r.unitType as "Residential" | "Admin",
-      status: r.status as "approved" | "pending" | "rejected",
+      status: r.status as "approved" | "pending" | "rejected" | "canceled",
       amountEgp: Number(r.amountEgp),
+      bulkEoiId: r.bulkEoiId,
+      eoiCategory: r.eoiCategory,
+      eoiSource: r.eoiSource,
+      nationality: r.nationality,
+      brokerageName: r.brokerageName,
     })),
   });
 

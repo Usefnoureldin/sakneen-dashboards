@@ -19,6 +19,7 @@ const BLUE = "#2109C4";
 const TERRACOTTA = "#C84B31";
 const GREEN = "#4FB54E";
 const AMBER = "#F59E0B";
+const GRAY = "#6B7280";
 const SLATE_GRID = "#DDE2EB";
 
 const tooltipStyle = {
@@ -164,6 +165,13 @@ export function DailyBarChart({
               name="Rejected"
               stackId="a"
               fill={TERRACOTTA}
+              radius={[0, 0, 0, 0]}
+            />
+            <Bar
+              dataKey={isCount ? "canceledCount" : "canceledValue"}
+              name="Canceled"
+              stackId="a"
+              fill={GRAY}
               radius={[4, 4, 0, 0]}
             />
           </>
@@ -184,16 +192,19 @@ export function StatusDoughnut({
   approved,
   pending,
   rejected,
+  canceled,
 }: {
   approved: number;
   pending: number;
   rejected: number;
+  canceled: number;
 }) {
-  const total = approved + pending + rejected;
+  const total = approved + pending + rejected + canceled;
   const data = [
     { name: "Approved", value: approved, color: GREEN },
     { name: "Pending", value: pending, color: AMBER },
     { name: "Rejected", value: rejected, color: TERRACOTTA },
+    { name: "Canceled", value: canceled, color: GRAY },
   ];
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -236,6 +247,115 @@ export function StatusDoughnut({
           iconSize={8}
         />
       </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function BulkBucketsChart({
+  data,
+  metric,
+}: {
+  data: Array<{ bucket: string; groups: number; units: number; value: number }>;
+  metric: "groups" | "value";
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <XAxis dataKey="bucket" {...chartAxisProps()} />
+        <YAxis
+          tickFormatter={(v) => (metric === "groups" ? formatCount(v) : formatValueShort(v, false))}
+          width={50}
+          {...chartAxisProps()}
+        />
+        <Tooltip
+          cursor={{ fill: "rgba(33, 9, 196, 0.04)" }}
+          content={(props: TipProps) => {
+            const { active, payload, label } = props;
+            if (!active || !payload?.length) return null;
+            const row = payload[0].payload as {
+              bucket: string;
+              groups: number;
+              units: number;
+              value: number;
+            };
+            return (
+              <div style={tooltipStyle}>
+                <div className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500">
+                  {tipLabel(label)} units per bulk
+                </div>
+                <div className="text-[12px] flex justify-between gap-4">
+                  <span className="text-slate-500">Groups</span>
+                  <span className="tabular-nums font-semibold">{formatCount(row.groups)}</span>
+                </div>
+                <div className="text-[12px] flex justify-between gap-4">
+                  <span className="text-slate-500">Units</span>
+                  <span className="tabular-nums font-semibold">{formatCount(row.units)}</span>
+                </div>
+                <div className="text-[12px] flex justify-between gap-4">
+                  <span className="text-slate-500">Value</span>
+                  <span className="tabular-nums font-semibold">{formatValueShort(row.value)}</span>
+                </div>
+              </div>
+            );
+          }}
+        />
+        <Bar
+          dataKey={metric}
+          name={metric === "groups" ? "Bulk groups" : "Total value"}
+          fill={metric === "groups" ? BLUE : TERRACOTTA}
+          radius={[4, 4, 0, 0]}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function BrokersBarChart({
+  data,
+}: {
+  data: Array<{ name: string; count: number; value: number; isOther?: boolean }>;
+}) {
+  // Horizontal bar, sorted descending (data already sorted, "Other" pinned last).
+  const height = Math.max(180, data.length * 28 + 40);
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart layout="vertical" data={data} margin={{ top: 4, right: 20, bottom: 4, left: 20 }}>
+        <XAxis type="number" tickFormatter={(v) => formatCount(v)} {...chartAxisProps()} />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={170}
+          tick={{ fill: "#374151", fontSize: 10, fontFamily: "var(--font-sans)" }}
+          axisLine={{ stroke: SLATE_GRID }}
+          tickLine={{ stroke: SLATE_GRID }}
+        />
+        <Tooltip
+          cursor={{ fill: "rgba(33, 9, 196, 0.04)" }}
+          content={(props: TipProps) => {
+            const { active, payload } = props;
+            if (!active || !payload?.length) return null;
+            const row = payload[0].payload as { name: string; count: number; value: number };
+            return (
+              <div style={tooltipStyle}>
+                <div className="text-[12px] text-charcoal font-semibold">{row.name}</div>
+                <div className="text-[12px] flex justify-between gap-4">
+                  <span className="text-slate-500">EOIs</span>
+                  <span className="tabular-nums font-semibold">{formatCount(row.count)}</span>
+                </div>
+                <div className="text-[12px] flex justify-between gap-4">
+                  <span className="text-slate-500">Value</span>
+                  <span className="tabular-nums font-semibold">{formatValueShort(row.value)}</span>
+                </div>
+              </div>
+            );
+          }}
+        />
+        <Bar dataKey="count" name="EOIs" radius={[0, 4, 4, 0]}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={d.isOther ? GRAY : BLUE} />
+          ))}
+        </Bar>
+      </BarChart>
     </ResponsiveContainer>
   );
 }

@@ -10,7 +10,32 @@ import {
   formatValueShort,
 } from "@/lib/format";
 
-export type DetailKey = "approved" | "pending" | "rejected" | "Residential" | "Admin" | null;
+export type DetailKey =
+  | "approved"
+  | "pending"
+  | "rejected"
+  | "canceled"
+  | "Residential"
+  | "Admin"
+  | "bulk:1"
+  | "bulk:2"
+  | "bulk:3-5"
+  | "bulk:6-10"
+  | "bulk:10-20"
+  | "bulk:20+"
+  | null;
+
+const BULK_BUCKETS: Record<
+  string,
+  { label: string; matches: (units: number) => boolean }
+> = {
+  "bulk:1": { label: "Singles (1 unit)", matches: (u) => u === 1 },
+  "bulk:2": { label: "Pairs (2 units)", matches: (u) => u === 2 },
+  "bulk:3-5": { label: "Small bulks (3-5 units)", matches: (u) => u >= 3 && u <= 5 },
+  "bulk:6-10": { label: "Mid bulks (6-10 units)", matches: (u) => u >= 6 && u <= 10 },
+  "bulk:10-20": { label: "Large bulks (10-20 units)", matches: (u) => u > 10 && u <= 20 },
+  "bulk:20+": { label: "Mega bulks (20+ units)", matches: (u) => u > 20 },
+};
 
 const STATUS_TONE: Record<
   string,
@@ -33,6 +58,12 @@ const STATUS_TONE: Record<
     pillBg: "bg-pill-rejected-bg",
     pillFg: "text-pill-rejected-fg",
     label: "Rejected",
+  },
+  canceled: {
+    accent: "bg-status-canceled",
+    pillBg: "bg-pill-canceled-bg",
+    pillFg: "text-pill-canceled-fg",
+    label: "Canceled",
   },
 };
 
@@ -78,50 +109,97 @@ export function DetailModal({
 
   if (!mounted || !open) return null;
 
-  const isStatus = open === "approved" || open === "pending" || open === "rejected";
+  const isStatus =
+    open === "approved" || open === "pending" || open === "rejected" || open === "canceled";
   const isType = open === "Residential" || open === "Admin";
+  const isBulk = open.startsWith("bulk:");
 
-  // Build per-day rows filtered to the chosen slice.
-  const rows = data.daily
-    .map((d) => {
-      let count = 0;
-      let value = 0;
-      if (isStatus) {
-        count =
-          open === "approved"
-            ? d.approvedCount
-            : open === "pending"
-              ? d.pendingCount
-              : d.rejectedCount;
-        value =
-          open === "approved"
-            ? d.approvedValue
-            : open === "pending"
-              ? d.pendingValue
-              : d.rejectedValue;
-      } else if (isType) {
-        // Type isn't pre-aggregated daily — derive from records.
-        const recs = data.records.filter((r) => r.eoiDate === d.date && r.unitType === open);
-        count = recs.length;
-        value = recs.reduce((s, r) => s + r.amountEgp, 0);
-      }
-      return { date: d.date, count, value };
-    })
-    .filter((r) => r.count > 0)
-    .sort((a, b) => b.count - a.count);
+  type Row = { key: string; primary: string; secondary?: string; count: number; value: number };
+  let rows: Row[] = [];
+  let countLabel = "Count";
+  let primaryLabel = "Date";
+
+  if (isBulk) {
+    const bucket = BULK_BUCKETS[open];
+    primaryLabel = "Bulk EOI ID";
+    countLabel = "Units";
+    // Group records by bulkEoiId, then filter groups by bucket size.
+    const groups = new Map<string, { units: number; value: number }>();
+    for (const r of data.records) {
+      if (r.bulkEoiId == null) continue;
+      const g = groups.get(r.bulkEoiId) ?? { units: 0, value: 0 };
+      g.units += 1;
+      g.value += r.amountEgp;
+      groups.set(r.bulkEoiId, g);
+    }
+    rows = [...groups.entries()]
+      .filter(([, g]) => bucket.matches(g.units))
+      .map(([id, g]) => ({ key: id, primary: id, count: g.units, value: g.value }))
+      .sort((a, b) => b.count - a.count || b.value - a.value);
+  } else {
+    // Daily breakdown for status/type slices.
+    rows = data.daily
+      .map((d) => {
+        let count = 0;
+        let value = 0;
+        if (isStatus) {
+          count =
+            open === "approved"
+              ? d.approvedCount
+              : open === "pending"
+                ? d.pendingCount
+                : open === "rejected"
+                  ? d.rejectedCount
+                  : d.canceledCount;
+          value =
+            open === "approved"
+              ? d.approvedValue
+              : open === "pending"
+                ? d.pendingValue
+                : open === "rejected"
+                  ? d.rejectedValue
+                  : d.canceledValue;
+        } else if (isType) {
+          const recs = data.records.filter((r) => r.eoiDate === d.date && r.unitType === open);
+          count = recs.length;
+          value = recs.reduce((s, r) => s + r.amountEgp, 0);
+        }
+        return {
+          key: d.date,
+          primary: formatDateLong(d.date),
+          secondary: formatDateShort(d.date),
+          count,
+          value,
+        } satisfies Row;
+      })
+      .filter((r) => r.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }
 
   const totalCount = rows.reduce((s, r) => s + r.count, 0);
   const totalValue = rows.reduce((s, r) => s + r.value, 0);
   const peakCount = Math.max(1, ...rows.map((r) => r.count));
 
-  const tone = isStatus
-    ? STATUS_TONE[open]
-    : {
-        accent: open === "Residential" ? "bg-sakneen-blue" : "bg-terracotta",
-        pillBg: open === "Residential" ? "bg-warm-cream" : "bg-slate-100",
-        pillFg: "text-charcoal",
-        label: open as string,
-      };
+  let tone: { accent: string; pillBg: string; pillFg: string; label: string };
+  if (isStatus) {
+    tone = STATUS_TONE[open];
+  } else if (isBulk) {
+    tone = {
+      accent: "bg-sakneen-blue",
+      pillBg: "bg-warm-cream",
+      pillFg: "text-charcoal",
+      label: BULK_BUCKETS[open].label,
+    };
+  } else {
+    tone = {
+      accent: open === "Residential" ? "bg-sakneen-blue" : "bg-terracotta",
+      pillBg: open === "Residential" ? "bg-warm-cream" : "bg-slate-100",
+      pillFg: "text-charcoal",
+      label: open as string,
+    };
+  }
+  // For bulk, "of total" denominator is unit count (= total EOIs).
+  const denominator = data.totals.totalCount;
 
   return (
     <div
@@ -155,11 +233,11 @@ export function DetailModal({
               {tone.label} breakdown
             </h2>
             <p className="text-sm text-slate-600 mt-0.5">
-              {formatCount(totalCount)} EOIs · {formatValueShort(totalValue)} ·{" "}
-              {data.totals.totalCount > 0
-                ? formatPercent(totalCount, data.totals.totalCount)
-                : "0%"}{" "}
-              of total
+              {isBulk
+                ? `${formatCount(rows.length)} groups · ${formatCount(totalCount)} units · ${formatValueShort(totalValue)}`
+                : `${formatCount(totalCount)} EOIs · ${formatValueShort(totalValue)} · ${
+                    denominator > 0 ? formatPercent(totalCount, denominator) : "0%"
+                  } of total`}
             </p>
           </div>
           <button
@@ -175,14 +253,16 @@ export function DetailModal({
         <div className="px-6 pt-4 pb-6 overflow-y-auto" style={{ maxHeight: "calc(85vh - 80px)" }}>
           {rows.length === 0 ? (
             <p className="text-sm text-slate-500 py-6 text-center">
-              No EOIs in this slice for the current filters.
+              {isBulk
+                ? "No bulk groups in this size band."
+                : "No EOIs in this slice for the current filters."}
             </p>
           ) : (
             <table className="w-full text-sm">
               <thead className="text-slate-500">
                 <tr>
-                  <Th>Date</Th>
-                  <Th className="text-right">Count</Th>
+                  <Th>{primaryLabel}</Th>
+                  <Th className="text-right">{countLabel}</Th>
                   <Th className="text-right">Value</Th>
                   <Th className="text-right">Share</Th>
                   <Th>Distribution</Th>
@@ -192,12 +272,14 @@ export function DetailModal({
                 {rows.map((r) => {
                   const widthPct = (r.count / peakCount) * 100;
                   return (
-                    <tr key={r.date} className="border-t border-slate-100">
+                    <tr key={r.key} className="border-t border-slate-100">
                       <Td>
-                        <span className="font-sans">{formatDateLong(r.date)}</span>
-                        <span className="ml-2 font-mono text-[10px] text-slate-400">
-                          {formatDateShort(r.date)}
-                        </span>
+                        <span className="font-sans">{r.primary}</span>
+                        {r.secondary ? (
+                          <span className="ml-2 font-mono text-[10px] text-slate-400">
+                            {r.secondary}
+                          </span>
+                        ) : null}
                       </Td>
                       <Td className="text-right tabular-nums font-semibold">
                         {formatCount(r.count)}

@@ -19,3 +19,16 @@ export async function saveUpload(args: {
   await writeFile(filePath, args.buffer);
   return filePath;
 }
+
+export async function savePdfReport(args: {
+  clientId: string;
+  uploadId: string;
+  buffer: Buffer;
+}): Promise<string> {
+  const base = getUploadsDir();
+  const dir = path.join(base, args.clientId);
+  await mkdir(dir, { recursive: true });
+  const filePath = path.join(dir, `${args.uploadId}.pdf`);
+  await writeFile(filePath, args.buffer);
+  return filePath;
+}

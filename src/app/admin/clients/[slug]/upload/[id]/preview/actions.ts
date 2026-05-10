@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients, eoiUploads } from "@/db/schema";
 import { logAudit } from "@/lib/audit";
+import { generateUploadPdf, resolvePrintBaseUrl } from "@/lib/pdf-generator";
+import { savePdfReport } from "@/lib/uploads-storage";
 
 async function requireAdmin() {
   const session = await auth();
@@ -55,6 +58,34 @@ export async function publishUploadAction(formData: FormData) {
     action: "upload_publish",
     metadata: { uploadId },
   });
+
+  // Pre-generate the PDF so client downloads are instant. Optimistic on failure:
+  // we keep the publish committed and let the on-demand fallback in the PDF route
+  // cover this upload until someone re-publishes or hits "regenerate".
+  try {
+    const baseUrl = resolvePrintBaseUrl(await headers());
+    const pdfBuffer = await generateUploadPdf({ uploadId, baseUrl });
+    const pdfPath = await savePdfReport({
+      clientId: client.id,
+      uploadId,
+      buffer: pdfBuffer,
+    });
+    await db.update(eoiUploads).set({ pdfPath }).where(eq(eoiUploads.id, uploadId));
+    await logAudit({
+      userId: session.user.id,
+      clientId: client.id,
+      action: "pdf_pregenerate",
+      metadata: { uploadId, bytes: pdfBuffer.length },
+    });
+  } catch (e) {
+    console.error("[publish] pre-generate PDF failed:", e);
+    await logAudit({
+      userId: session.user.id,
+      clientId: client.id,
+      action: "pdf_pregenerate_failed",
+      metadata: { uploadId, error: (e as Error).message },
+    });
+  }
 
   revalidatePath(`/admin/clients/${slug}`);
   revalidatePath("/admin");

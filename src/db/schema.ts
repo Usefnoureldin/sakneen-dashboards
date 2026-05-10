@@ -73,6 +73,7 @@ export const eoiUploads = pgTable(
     totalValueEgp: bigint("total_value_egp", { mode: "bigint" }).notNull(),
     parseWarnings: jsonb("parse_warnings"),
     notes: text("notes"),
+    pdfPath: text("pdf_path"),
     uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
   },
@@ -106,16 +107,22 @@ export const eoiRecords = pgTable(
     eoiDate: date("eoi_date").notNull(),
     amountEgp: bigint("amount_egp", { mode: "bigint" }).notNull(),
     sourceRowIndex: integer("source_row_index").notNull(),
+    bulkEoiId: text("bulk_eoi_id"),
+    eoiCategory: text("eoi_category"),
+    eoiSource: text("eoi_source"),
+    nationality: text("nationality"),
+    brokerageName: text("brokerage_name"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check("eoi_records_unit_type_check", sql`${t.unitType} IN ('Residential', 'Admin')`),
     check(
       "eoi_records_status_check",
-      sql`${t.status} IN ('approved', 'pending', 'rejected')`,
+      sql`${t.status} IN ('approved', 'pending', 'rejected', 'canceled')`,
     ),
     index("idx_eoi_records_client_date").on(t.clientId, t.eoiDate),
     index("idx_eoi_records_upload").on(t.uploadId),
+    index("idx_eoi_records_bulk").on(t.uploadId, t.bulkEoiId),
   ],
 );
 
