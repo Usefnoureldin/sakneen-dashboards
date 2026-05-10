@@ -38,9 +38,14 @@ export async function GET(req: Request) {
   }
 
   const token = signPdfToken(upload.id);
+  // Prefer explicit env config; AUTH_URL is the canonical public host. Fall back to the
+  // request's forwarded host (Railway sets x-forwarded-host) and finally req.url.
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const forwardedProto = req.headers.get("x-forwarded-proto") || "https";
   const baseUrl =
     process.env.PRINT_BASE_URL ||
-    new URL(req.url).origin.replace(/^https?:\/\/[^.]+\.127\.0\.0\.1\.nip\.io/, "http://localhost");
+    process.env.AUTH_URL ||
+    (forwardedHost ? `${forwardedProto}://${forwardedHost}` : new URL(req.url).origin);
   const printUrl = `${baseUrl}/print/${upload.id}?token=${encodeURIComponent(token)}`;
 
   // Lazy import so the heavy playwright dep isn't loaded for routes that don't need it.
