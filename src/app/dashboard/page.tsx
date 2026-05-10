@@ -7,6 +7,7 @@ import { clients, eoiRecords, eoiUploads } from "@/db/schema";
 import { buildDashboard } from "@/lib/aggregations";
 import { requireActiveSession } from "@/lib/session-guard";
 import { DashboardView } from "./dashboard-view";
+import { UserMenu } from "./user-menu";
 
 export default async function DashboardHome() {
   const session = await requireActiveSession();
@@ -83,27 +84,14 @@ export default async function DashboardHome() {
               {client?.displayName ?? "Dashboard"}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <a
-              href="/profile"
-              className="text-xs text-slate-600 hover:text-charcoal hidden sm:inline"
-            >
-              {session?.user?.email}
-            </a>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/login" });
-              }}
-            >
-              <button
-                type="submit"
-                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-charcoal hover:bg-slate-50"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
+          <UserMenu
+            name={session?.user?.name ?? session?.user?.email ?? "User"}
+            email={session?.user?.email ?? ""}
+            signOut={async () => {
+              "use server";
+              await signOut({ redirectTo: "/login" });
+            }}
+          />
         </div>
       </header>
 
