@@ -20,6 +20,7 @@ import {
 } from "@/lib/format";
 import { DailyBarChart, StatusDoughnut, TypeCompositionBar } from "./charts";
 import { DownloadPdfButton } from "./download-pdf-button";
+import { DetailModal, type DetailKey } from "./detail-modal";
 
 type SortKey = "date" | "count" | "value" | "approved" | "pending" | "rejected";
 
@@ -40,6 +41,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
     key: "date",
     dir: "asc",
   });
+  const [openDetail, setOpenDetail] = useState<DetailKey>(null);
 
   // Derive the effective filter object.
   const filter: FilterState = useMemo(() => {
@@ -289,6 +291,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
             value={data.statusBreakdown.approved.value}
             total={data.totals.totalCount}
             tone="approved"
+            onClick={() => setOpenDetail("approved")}
           />
           <StatusCard
             label="Pending"
@@ -296,6 +299,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
             value={data.statusBreakdown.pending.value}
             total={data.totals.totalCount}
             tone="pending"
+            onClick={() => setOpenDetail("pending")}
           />
           <StatusCard
             label="Rejected"
@@ -303,6 +307,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
             value={data.statusBreakdown.rejected.value}
             total={data.totals.totalCount}
             tone="rejected"
+            onClick={() => setOpenDetail("rejected")}
           />
         </div>
         <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
@@ -372,6 +377,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
             count={data.typeBreakdown.Residential.count}
             value={data.typeBreakdown.Residential.value}
             total={data.totals.totalCount}
+            onClick={() => setOpenDetail("Residential")}
           />
           <TypeCard
             label="Admin"
@@ -379,6 +385,7 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
             count={data.typeBreakdown.Admin.count}
             value={data.typeBreakdown.Admin.value}
             total={data.totals.totalCount}
+            onClick={() => setOpenDetail("Admin")}
           />
         </div>
 
@@ -414,6 +421,8 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
         </span>
         <span>Last updated {formatTimestamp(data.upload.publishedAt)}</span>
       </footer>
+
+      <DetailModal open={openDetail} onClose={() => setOpenDetail(null)} data={data} />
     </main>
   );
 }
@@ -516,12 +525,14 @@ function StatusCard({
   value,
   total,
   tone,
+  onClick,
 }: {
   label: string;
   count: number;
   value: number;
   total: number;
   tone: "approved" | "pending" | "rejected";
+  onClick?: () => void;
 }) {
   const accent =
     tone === "approved" ? "bg-status-approved" : tone === "pending" ? "bg-status-pending" : "bg-status-rejected";
@@ -532,13 +543,20 @@ function StatusCard({
         ? "bg-pill-pending-bg text-pill-pending-fg"
         : "bg-pill-rejected-bg text-pill-rejected-fg";
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-left rounded-xl border border-slate-200 bg-white overflow-hidden cursor-pointer transition-all hover:border-slate-300 hover:shadow-sm hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-sakneen-blue/40 group"
+    >
       <div className={`h-1 ${accent}`} />
-      <div className="p-4">
+      <div className="p-4 relative">
         <span
           className={`inline-block font-mono text-[9px] uppercase tracking-[1.5px] px-2 py-0.5 rounded ${pill}`}
         >
           ● {label}
+        </span>
+        <span className="absolute top-3 right-3 font-mono text-[9px] uppercase tracking-[1.5px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          Click for daily
         </span>
         <p className="font-serif text-3xl text-charcoal mt-3">{formatPercent(count, total)}</p>
         <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
@@ -552,7 +570,7 @@ function StatusCard({
           </div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -563,6 +581,7 @@ function TypeCard({
   count,
   value,
   total,
+  onClick,
 }: {
   featured?: boolean;
   label: string;
@@ -570,11 +589,14 @@ function TypeCard({
   count: number;
   value: number;
   total: number;
+  onClick?: () => void;
 }) {
   return (
-    <div
-      className={`rounded-xl p-5 ${
-        featured ? "bg-warm-cream" : "bg-white border border-slate-200"
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left w-full rounded-xl p-5 transition-all cursor-pointer hover:shadow-sm hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-sakneen-blue/40 group ${
+        featured ? "bg-warm-cream" : "bg-white border border-slate-200 hover:border-slate-300"
       }`}
     >
       <div className="flex items-baseline justify-between">
@@ -588,7 +610,12 @@ function TypeCard({
         </span>
       </div>
       <p className="font-serif text-5xl text-charcoal mt-3">{formatPercent(count, total)}</p>
-      <p className="text-sm text-slate-600 mt-0.5">of total EOI volume by count</p>
+      <p className="text-sm text-slate-600 mt-0.5 flex items-baseline justify-between">
+        <span>of total EOI volume by count</span>
+        <span className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          Click for daily
+        </span>
+      </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div>
           <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-slate-500">Count</p>
@@ -601,7 +628,7 @@ function TypeCard({
           <p className="font-semibold tabular-nums">{formatValueShort(value, false)}</p>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
