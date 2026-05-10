@@ -3,6 +3,8 @@
 > Living status doc. Update when something ships, breaks, or changes direction.
 > Source of truth for "where are we?" so a fresh Claude session (or human) can catch up in 60 seconds.
 > Last updated: 2026-05-10 (session 2)
+>
+> Deploys: Railway auto-deploys on push to `main` (connected via Railway GitHub App, 2026-05-10). No more `railway up` from local.
 
 ## TL;DR
 
