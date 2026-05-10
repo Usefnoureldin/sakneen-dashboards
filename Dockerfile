@@ -5,7 +5,8 @@
 FROM node:20-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# Pin pnpm explicitly so corepack doesn't pull the latest (which may require newer Node).
+RUN corepack enable && corepack prepare pnpm@10.33.3 --activate
 
 # =========== deps ===========
 FROM base AS deps
@@ -25,7 +26,7 @@ RUN pnpm build
 FROM node:20-bookworm-slim AS runner
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.33.3 --activate
 
 # Chromium runtime libraries for Playwright (PDF generation).
 RUN apt-get update && apt-get install -y --no-install-recommends \
