@@ -2,13 +2,14 @@
 
 > Living status doc. Update when something ships, breaks, or changes direction.
 > Source of truth for "where are we?" so a fresh Claude session (or human) can catch up in 60 seconds.
-> Last updated: 2026-05-10 (session 2)
+> Last updated: 2026-05-10 (session 2, end of day)
 >
-> Deploys: Railway auto-deploys on push to `main` (connected via Railway GitHub App, 2026-05-10, requires Hobby plan or higher). No more `railway up` from local.
+> Deploys: Railway auto-deploys on push to `main` (Railway GitHub App, requires Hobby plan or higher — both wired 2026-05-10). No more `railway up` from local.
+> Live: https://paragonadeer-production.up.railway.app
 
 ## TL;DR
 
-MVP shipped + a major iteration on real Sakneen export data. Schema and parser now match the live wide-schema export (14 cols, mixed serial/text dates, `canceled` status, blank brokerage rows). Dashboard gained 4 new sections (Direct vs Indirect, Nationality, Bulk Units, Broker Performance) + clickable bulk cards. PDF is pre-generated on publish so client downloads are sub-second instead of 3-14 seconds. Sakneen brand swapped from wordmark to transparent-PNG logo across header, admin, login, and footer.
+MVP shipped, major iteration on real Sakneen export data, end-to-end verified in production. Schema and parser match the live wide-schema export (14 cols, mixed serial/text dates, `canceled` status). Dashboard has 4 new sections (Direct vs Indirect, Nationality, Bulk Units, Broker Performance), clickable bulk cards, sticky nav, mobile-optimized layout (initials avatar, 2-col status grid, fixed-position date picker, shorter title). PDF pre-generated on publish so client downloads are ~0.3s instead of 3-14s. Brand: transparent-PNG logo + light-blue brand accent (terracotta → `#4A6CF7`) + DM Serif client co-brand in nav. New date-range picker with quick chips (Last 7 days, YTD, last 6 months) + 2-month range calendar.
 
 ## Build plan progress
 
@@ -76,8 +77,31 @@ All four sections mirrored in the print PDF as new pages 6-9 (daily ledger renum
 
 ### Important data-handling notes
 
-- `excel_uploads/` (real customer EOI exports) and `public/*.pdf` (generated reports with customer data) are now in `.gitignore`. Don't commit either.
+- `excel_uploads/` (real customer EOI exports) and `public/*.pdf` (generated reports with customer data) are now in `.gitignore`. `.dockerignore` mirrors the same rules so they don't ship in the production image either.
+- `.gitignore` also catches `*password*` and `*credentials*` filenames.
 - Decision #2 in `09-open-decisions.md` is no longer accurate. The "standardized format" agreed with the export team never rolled out; we adapted to the live wide schema instead. The doc should be updated.
+
+## Session 2026-05-10 part 2: prod deploy + UI polish
+
+### Production deploy
+
+- Manual `railway up` with `74f290c` to bring the new code live (Railway service `paragonadeer` in project `sakneen-eoi-dashboards`, region sfo, volume `/data` 49 MB / 500 MB).
+- GitHub auto-deploy connected via Railway GitHub App after upgrading the workspace from Trial → Hobby plan ($5/mo). Verified end-to-end with a test push (`d4327bb`) that triggered a build at +80s.
+- All 6 prod user passwords rotated via `pnpm db:set-passwords` against prod DB. Source of truth: `secrets/passwords.json` (gitignored). Re-run the script to rotate.
+
+### UI polish
+
+- **Sticky nav** with `sticky top-0 z-30` + `bg-white/80 backdrop-blur` on dashboard + admin headers (`5681a76`).
+- **Brand accent shift**: `--color-terracotta` swapped from `#C84B31` to `#4A6CF7` (light blue). Affects hero "Total Value Collected" card, eyebrow tags, "PRIMARY"/"IN-HOUSE" pills, Type composition Admin segment, value-mode chart bars. Charts split the constant into `ACCENT_BLUE` + `REJECTED_RED` so the Rejected status keeps its red. (`57f73b2`)
+- **Featured cards** (Residential TypeCard, Direct ChannelCard) switched from `bg-warm-cream` (invisible against page bg) to `bg-white border-slate-200`. Differentiation now lives in the colored pill.
+- **Date-range picker** (`react-day-picker` v10): single popover button replaces the old chip-group + inline date inputs. Quick Select Month chips (last 6 months) + 2-month calendar with range mode (`a76a7a1`). Plus quick chips: **Last 7 days** (always visible), **YTD** (desktop only) (`11d3608`).
+- **Mobile UX** (`8f4bfa3`):
+  - Hero title shortens to "EOI Report" below `sm`
+  - Status chips become a 2-col grid (4 chips on 2 rows) on mobile
+  - Title section uses `items-center` so the Download PDF button vertically centers against the title block
+  - Date picker switches to fixed positioning (`inset-x-4 top-24`) and 1-month layout on mobile
+  - Navbar replaces the small `PARAGON ADEER` mono tag with **DM Serif Display** in charcoal, separated from the logo by a thin vertical divider — reads as a co-brand
+- **Mobile user menu** (`446295c`): Sign out button on mobile is replaced with a 36px Sakneen-blue circular avatar showing initials (FH for Fouad Harraz, etc). Tap → dropdown with name + email + Profile link + Sign out. Desktop unchanged.
 
 ## What runs where
 
@@ -107,9 +131,9 @@ Still open (defaults may have been silently applied, confirm before relying on):
 
 ## Known gaps / likely next work
 
-- UAT pass with real Paragon data (Day 14) is unverified
-- No `secrets/passwords.json` exists locally; only used in prod via `pnpm db:set-passwords`
-- Repo is currently public — may want to flip private (Decision #13)
+- **Forgot-password flow** parked. Will use Resend for sending reset links. Need: verified `EMAIL_FROM` on a sakneen.com subdomain (SPF/DKIM), a `password_reset_tokens` table, /forgot + /reset pages, audit + rate limit. Half-day of work.
+- **Custom domain** `paragonadeer.sakneen.com` not configured. Add via Railway service Settings → Networking → Custom Domain, then CNAME in DNS. 5-min job. Tenant resolution code in `src/lib/tenant.ts` already picks up the slug from the subdomain.
+- The existing prod upload from before today's session predates the 5 new record columns (`bulk_eoi_id`, `eoi_category`, etc), so its 4 new dashboard sections are empty. Re-uploading the May 9 (or current) Excel via /admin and clicking Publish populates everything.
 
 ## How to update this doc
 
