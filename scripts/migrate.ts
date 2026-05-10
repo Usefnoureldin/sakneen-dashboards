@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
-config({ path: ".env.local", override: true });
+config({ path: ".env.local", override: false });
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is not set");

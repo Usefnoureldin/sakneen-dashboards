@@ -5,7 +5,9 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 
-config({ path: ".env.local", override: true });
+// Load .env.local for local dev. override: false means real process.env wins,
+// so `railway run` (which injects prod env) connects to the prod DB, not local.
+config({ path: ".env.local", override: false });
 
 import { clients, users } from "../src/db/schema";
 
