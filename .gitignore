@@ -38,6 +38,9 @@ yarn-error.log*
 /uploads/
 /data/
 
+# Railway local cache
+.railway/
+
 # vercel
 .vercel
 
