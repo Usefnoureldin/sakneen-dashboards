@@ -26,6 +26,7 @@ import {
   StatusDoughnut,
   TypeCompositionBar,
 } from "./charts";
+import { DateRangePicker } from "./date-range-picker";
 import { DownloadPdfButton } from "./download-pdf-button";
 import { DetailModal, type DetailKey } from "./detail-modal";
 
@@ -37,7 +38,6 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
   const [newPublishAvailable, setNewPublishAvailable] = useState(false);
 
   // Filter state.
-  const [rangePreset, setRangePreset] = useState<"7" | "30" | "all" | "custom">("all");
   const [customStart, setCustomStart] = useState<string | null>(null);
   const [customEnd, setCustomEnd] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<EoiStatus[]>([]);
@@ -52,31 +52,15 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
   const [openDetail, setOpenDetail] = useState<DetailKey>(null);
 
   // Derive the effective filter object.
-  const filter: FilterState = useMemo(() => {
-    let start: string | null = null;
-    let end: string | null = null;
-    const max = live.upload.dateMax;
-    if (rangePreset === "7") {
-      const max_ = new Date(max);
-      const from = new Date(max_.getTime() - 6 * 86400000);
-      start = isoDate(from);
-      end = max;
-    } else if (rangePreset === "30") {
-      const max_ = new Date(max);
-      const from = new Date(max_.getTime() - 29 * 86400000);
-      start = isoDate(from);
-      end = max;
-    } else if (rangePreset === "custom") {
-      start = customStart;
-      end = customEnd;
-    }
-    return {
-      rangeStart: start,
-      rangeEnd: end,
+  const filter: FilterState = useMemo(
+    () => ({
+      rangeStart: customStart,
+      rangeEnd: customEnd,
       statuses,
       types,
-    };
-  }, [rangePreset, customStart, customEnd, statuses, types, live.upload.dateMax]);
+    }),
+    [customStart, customEnd, statuses, types],
+  );
 
   const data = useMemo(() => applyFilters(live, filter), [live, filter]);
 
@@ -153,36 +137,16 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
       {/* Filters */}
       <section className="rounded-xl border border-slate-200 bg-white p-3 flex flex-wrap items-center gap-3">
         <Group label="Range">
-          {(["7", "30", "all", "custom"] as const).map((r) => (
-            <Chip
-              key={r}
-              active={rangePreset === r}
-              onClick={() => setRangePreset(r)}
-            >
-              {r === "7" ? "Last 7 days" : r === "30" ? "Last 30 days" : r === "all" ? "Full window" : "Custom"}
-            </Chip>
-          ))}
-          {rangePreset === "custom" ? (
-            <span className="flex items-center gap-1.5 ml-1">
-              <input
-                type="date"
-                min={live.upload.dateMin}
-                max={live.upload.dateMax}
-                value={customStart ?? ""}
-                onChange={(e) => setCustomStart(e.target.value || null)}
-                className="text-xs rounded border border-slate-200 px-1.5 py-0.5"
-              />
-              <span className="text-xs text-slate-500">to</span>
-              <input
-                type="date"
-                min={live.upload.dateMin}
-                max={live.upload.dateMax}
-                value={customEnd ?? ""}
-                onChange={(e) => setCustomEnd(e.target.value || null)}
-                className="text-xs rounded border border-slate-200 px-1.5 py-0.5"
-              />
-            </span>
-          ) : null}
+          <DateRangePicker
+            start={customStart}
+            end={customEnd}
+            min={live.upload.dateMin}
+            max={live.upload.dateMax}
+            onChange={({ start, end }) => {
+              setCustomStart(start);
+              setCustomEnd(end);
+            }}
+          />
         </Group>
 
         <Divider />
@@ -219,7 +183,6 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
 
         <button
           onClick={() => {
-            setRangePreset("all");
             setCustomStart(null);
             setCustomEnd(null);
             setStatuses([]);
@@ -544,10 +507,6 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
       <DetailModal open={openDetail} onClose={() => setOpenDetail(null)} data={data} />
     </main>
   );
-}
-
-function isoDate(d: Date) {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 function capitalize(s: string) {
