@@ -41,6 +41,9 @@ yarn-error.log*
 # Railway local cache
 .railway/
 
+# Local secrets — never commit
+/secrets/
+
 # vercel
 .vercel
 
