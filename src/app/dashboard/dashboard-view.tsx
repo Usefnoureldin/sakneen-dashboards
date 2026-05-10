@@ -137,16 +137,56 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
       {/* Filters */}
       <section className="rounded-xl border border-slate-200 bg-white p-3 flex flex-wrap items-center gap-3">
         <Group label="Range">
-          <DateRangePicker
-            start={customStart}
-            end={customEnd}
-            min={live.upload.dateMin}
-            max={live.upload.dateMax}
-            onChange={({ start, end }) => {
-              setCustomStart(start);
-              setCustomEnd(end);
-            }}
-          />
+          {(() => {
+            const max = live.upload.dateMax;
+            const min = live.upload.dateMin;
+            const maxD = new Date(`${max}T00:00:00Z`);
+            // Last 7 days inclusive of dateMax.
+            const last7Start = new Date(maxD.getTime() - 6 * 86400000);
+            const last7 = {
+              start: clampToMin(toISO(last7Start), min),
+              end: max,
+            };
+            // YTD: Jan 1 of the dateMax's year (clamped to dateMin).
+            const ytdStartRaw = `${maxD.getUTCFullYear()}-01-01`;
+            const ytd = { start: clampToMin(ytdStartRaw, min), end: max };
+            const isLast7 = customStart === last7.start && customEnd === last7.end;
+            const isYtd = customStart === ytd.start && customEnd === ytd.end;
+            return (
+              <>
+                <Chip
+                  active={isLast7}
+                  onClick={() => {
+                    setCustomStart(last7.start);
+                    setCustomEnd(last7.end);
+                  }}
+                >
+                  Last 7 days
+                </Chip>
+                <span className="hidden sm:inline-flex">
+                  <Chip
+                    active={isYtd}
+                    onClick={() => {
+                      setCustomStart(ytd.start);
+                      setCustomEnd(ytd.end);
+                    }}
+                  >
+                    YTD
+                  </Chip>
+                </span>
+                <DateRangePicker
+                  start={customStart}
+                  end={customEnd}
+                  min={min}
+                  max={max}
+                  onChange={({ start, end }) => {
+                    setCustomStart(start);
+                    setCustomEnd(end);
+                  }}
+                />
+              </>
+            );
+          })()}
         </Group>
 
         <Divider />
@@ -511,6 +551,14 @@ export function DashboardView({ initial }: { initial: DashboardData }) {
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function toISO(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function clampToMin(s: string, min: string): string {
+  return s < min ? min : s;
 }
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
