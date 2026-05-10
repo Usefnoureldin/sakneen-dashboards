@@ -16,7 +16,8 @@ import type { DailyBucket } from "@/lib/aggregations";
 import { formatCount, formatDateShort, formatValueShort } from "@/lib/format";
 
 const BLUE = "#2109C4";
-const TERRACOTTA = "#C84B31";
+const ACCENT_BLUE = "#4A6CF7";
+const REJECTED_RED = "#C84B31";
 const GREEN = "#4FB54E";
 const AMBER = "#F59E0B";
 const GRAY = "#6B7280";
@@ -164,7 +165,7 @@ export function DailyBarChart({
               dataKey={isCount ? "rejectedCount" : "rejectedValue"}
               name="Rejected"
               stackId="a"
-              fill={TERRACOTTA}
+              fill={REJECTED_RED}
               radius={[0, 0, 0, 0]}
             />
             <Bar
@@ -179,7 +180,7 @@ export function DailyBarChart({
           <Bar
             dataKey={isCount ? "count" : "value"}
             name={isCount ? "EOIs" : "Value"}
-            fill={isCount ? BLUE : TERRACOTTA}
+            fill={isCount ? BLUE : ACCENT_BLUE}
             radius={[4, 4, 0, 0]}
           />
         )}
@@ -203,7 +204,7 @@ export function StatusDoughnut({
   const data = [
     { name: "Approved", value: approved, color: GREEN },
     { name: "Pending", value: pending, color: AMBER },
-    { name: "Rejected", value: rejected, color: TERRACOTTA },
+    { name: "Rejected", value: rejected, color: REJECTED_RED },
     { name: "Canceled", value: canceled, color: GRAY },
   ];
   return (
@@ -302,7 +303,7 @@ export function BulkBucketsChart({
         <Bar
           dataKey={metric}
           name={metric === "groups" ? "Bulk groups" : "Total value"}
-          fill={metric === "groups" ? BLUE : TERRACOTTA}
+          fill={metric === "groups" ? BLUE : ACCENT_BLUE}
           radius={[4, 4, 0, 0]}
         />
       </BarChart>
@@ -424,7 +425,7 @@ export function TypeCompositionBar({
           verticalAlign="top"
         />
         <Bar dataKey="Residential" stackId="t" fill={BLUE} radius={[4, 0, 0, 4]} />
-        <Bar dataKey="Admin" stackId="t" fill={TERRACOTTA} radius={[0, 4, 4, 0]} />
+        <Bar dataKey="Admin" stackId="t" fill={ACCENT_BLUE} radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

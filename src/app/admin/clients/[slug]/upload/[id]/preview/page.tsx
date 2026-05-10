@@ -217,7 +217,7 @@ function StatusBreakdown(props: {
 function TypeBreakdown(props: { residential: number; admin: number; total: number }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div className="rounded-xl bg-warm-cream p-5">
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
         <p className="font-mono text-[9px] uppercase tracking-[1.5px] text-terracotta mb-1">
           Residential
         </p>

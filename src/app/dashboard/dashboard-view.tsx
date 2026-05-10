@@ -722,9 +722,7 @@ function TypeCard({
     <button
       type="button"
       onClick={onClick}
-      className={`text-left w-full rounded-xl p-5 transition-all cursor-pointer hover:shadow-sm hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-sakneen-blue/40 group ${
-        featured ? "bg-warm-cream" : "bg-white border border-slate-200 hover:border-slate-300"
-      }`}
+      className={`text-left w-full rounded-xl p-5 transition-all cursor-pointer hover:shadow-sm hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-sakneen-blue/40 group bg-white border border-slate-200 hover:border-slate-300`}
     >
       <div className="flex items-baseline justify-between">
         <p className="font-serif text-xl text-charcoal">{label}</p>
@@ -915,9 +913,7 @@ function ChannelCard({
 }) {
   return (
     <div
-      className={`rounded-xl p-5 ${
-        featured ? "bg-warm-cream" : "bg-white border border-slate-200"
-      }`}
+      className="rounded-xl p-5 bg-white border border-slate-200"
     >
       <div className="flex items-baseline justify-between">
         <p className="font-serif text-xl text-charcoal">{label}</p>

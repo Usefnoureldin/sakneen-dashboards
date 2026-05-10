@@ -15,7 +15,8 @@ import type { DailyBucket } from "@/lib/aggregations";
 import { formatCount, formatDateShort, formatValueShort } from "@/lib/format";
 
 const BLUE = "#2109C4";
-const TERRACOTTA = "#C84B31";
+const ACCENT_BLUE = "#4A6CF7";
+const REJECTED_RED = "#C84B31";
 const GREEN = "#4FB54E";
 const AMBER = "#F59E0B";
 const GRAY = "#6B7280";
@@ -80,7 +81,7 @@ export function PrintDailyChart({
               dataKey={isCount ? "rejectedCount" : "rejectedValue"}
               name="Rejected"
               stackId="a"
-              fill={TERRACOTTA}
+              fill={REJECTED_RED}
               isAnimationActive={false}
             />
             <Bar
@@ -94,7 +95,7 @@ export function PrintDailyChart({
         ) : (
           <Bar
             dataKey={isCount ? "count" : "value"}
-            fill={isCount ? BLUE : TERRACOTTA}
+            fill={isCount ? BLUE : ACCENT_BLUE}
             isAnimationActive={false}
           />
         )}
@@ -119,7 +120,7 @@ export function PrintStatusDoughnut({
   const data = [
     { name: "Approved", value: approved, color: GREEN },
     { name: "Pending", value: pending, color: AMBER },
-    { name: "Rejected", value: rejected, color: TERRACOTTA },
+    { name: "Rejected", value: rejected, color: REJECTED_RED },
     { name: "Canceled", value: canceled, color: GRAY },
   ];
   return (
@@ -188,7 +189,7 @@ export function PrintTypeBar({
           verticalAlign="top"
         />
         <Bar dataKey="Residential" stackId="t" fill={BLUE} isAnimationActive={false} />
-        <Bar dataKey="Admin" stackId="t" fill={TERRACOTTA} isAnimationActive={false} />
+        <Bar dataKey="Admin" stackId="t" fill={ACCENT_BLUE} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -210,7 +211,7 @@ export function PrintBulkChart({
         <YAxis width={48} {...axisProps} />
         <Bar
           dataKey={metric}
-          fill={metric === "groups" ? BLUE : TERRACOTTA}
+          fill={metric === "groups" ? BLUE : ACCENT_BLUE}
           isAnimationActive={false}
         />
       </BarChart>
