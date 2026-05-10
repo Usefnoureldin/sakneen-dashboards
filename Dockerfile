@@ -11,8 +11,7 @@ RUN corepack enable
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # =========== builder ===========
 FROM base AS builder
@@ -41,10 +40,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
-# Install only production deps + the Playwright Chromium binary.
+# Install all deps (dev included so drizzle-kit/tsx are available for migrate scripts)
+# + the Playwright Chromium binary.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod=false
+RUN pnpm install --frozen-lockfile
 RUN pnpm exec playwright install --with-deps chromium
 
 # Copy build output + artifacts the runner needs.
