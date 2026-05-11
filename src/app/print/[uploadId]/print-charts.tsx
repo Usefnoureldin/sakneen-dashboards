@@ -110,7 +110,10 @@ export function PrintDailyChart({
                 fill="#374151"
                 fontSize={8}
                 fontFamily="var(--font-sans)"
-                formatter={(v: number) => (v > 0 ? String(v) : "")}
+                formatter={(v) => {
+                  const n = Number(v);
+                  return n > 0 ? String(n) : "";
+                }}
               />
             ) : null}
           </Bar>
@@ -192,7 +195,10 @@ export function PrintTypeBar({
       Admin: (adminValue / tValue) * 100,
     },
   ];
-  const pctLabel = (v: number) => (v >= 4 ? `${v.toFixed(1)}%` : "");
+  const pctLabel = (v: unknown) => {
+    const n = Number(v);
+    return n >= 4 ? `${n.toFixed(1)}%` : "";
+  };
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart layout="vertical" data={data} margin={{ top: 4, right: 32, bottom: 18, left: 56 }}>

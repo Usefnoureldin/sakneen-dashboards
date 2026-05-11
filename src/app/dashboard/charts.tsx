@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
   Cell,
+  LabelList,
   Legend,
   Pie,
   PieChart,
@@ -361,6 +363,18 @@ export function BrokersBarChart({
   );
 }
 
+function useIsMobile(query = "(max-width: 639px)") {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [query]);
+  return isMobile;
+}
+
 export function TypeCompositionBar({
   residentialCount,
   adminCount,
@@ -372,29 +386,47 @@ export function TypeCompositionBar({
   residentialValue: number;
   adminValue: number;
 }) {
+  const isMobile = useIsMobile();
   const tCount = residentialCount + adminCount || 1;
   const tValue = residentialValue + adminValue || 1;
   const data = [
     {
-      label: "By count",
+      label: isMobile ? "Count" : "By count",
       Residential: (residentialCount / tCount) * 100,
       Admin: (adminCount / tCount) * 100,
     },
     {
-      label: "By value",
+      label: isMobile ? "Value" : "By value",
       Residential: (residentialValue / tValue) * 100,
       Admin: (adminValue / tValue) * 100,
     },
   ];
+  // On mobile: shrink the axis gutter so the bars span the full card width
+  // and inline the % labels into each segment.
+  const yWidth = isMobile ? 40 : 60;
+  const leftMargin = isMobile ? 0 : 60;
+  const pctLabel = (v: unknown) => {
+    const n = Number(v);
+    return n >= 8 ? `${n.toFixed(0)}%` : "";
+  };
   return (
-    <ResponsiveContainer width="100%" height={140}>
-      <BarChart layout="vertical" data={data} margin={{ top: 0, right: 10, bottom: 0, left: 60 }}>
+    <ResponsiveContainer width="100%" height={isMobile ? 130 : 140}>
+      <BarChart
+        layout="vertical"
+        data={data}
+        margin={{ top: 4, right: 10, bottom: 0, left: leftMargin }}
+      >
         <XAxis type="number" hide domain={[0, 100]} />
         <YAxis
           type="category"
           dataKey="label"
           {...chartAxisProps()}
-          width={60}
+          width={yWidth}
+          tick={{
+            fill: "#374151",
+            fontSize: isMobile ? 10 : 10,
+            fontFamily: "var(--font-sans)",
+          }}
         />
         <Tooltip
           content={(props: TipProps) => {
@@ -424,8 +456,30 @@ export function TypeCompositionBar({
           align="right"
           verticalAlign="top"
         />
-        <Bar dataKey="Residential" stackId="t" fill={BLUE} radius={[4, 0, 0, 4]} />
-        <Bar dataKey="Admin" stackId="t" fill={ACCENT_BLUE} radius={[0, 4, 4, 0]} />
+        <Bar dataKey="Residential" stackId="t" fill={BLUE} radius={[4, 0, 0, 4]}>
+          {isMobile ? (
+            <LabelList
+              dataKey="Residential"
+              position="center"
+              formatter={pctLabel}
+              fill="#FFFFFF"
+              fontSize={11}
+              fontWeight={600}
+            />
+          ) : null}
+        </Bar>
+        <Bar dataKey="Admin" stackId="t" fill={ACCENT_BLUE} radius={[0, 4, 4, 0]}>
+          {isMobile ? (
+            <LabelList
+              dataKey="Admin"
+              position="center"
+              formatter={pctLabel}
+              fill="#FFFFFF"
+              fontSize={11}
+              fontWeight={600}
+            />
+          ) : null}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

@@ -2,7 +2,7 @@
 
 > Living status doc. Update when something ships, breaks, or changes direction.
 > Source of truth for "where are we?" so a fresh Claude session (or human) can catch up in 60 seconds.
-> Last updated: 2026-05-10 (session 2, end of day)
+> Last updated: 2026-05-11 (session 3 - PDF/print + mobile chart fixes)
 >
 > Deploys: Railway auto-deploys on push to `main` (Railway GitHub App, requires Hobby plan or higher — both wired 2026-05-10). No more `railway up` from local.
 > Live: https://paragonadeer-production.up.railway.app
@@ -102,6 +102,26 @@ All four sections mirrored in the print PDF as new pages 6-9 (daily ledger renum
   - Date picker switches to fixed positioning (`inset-x-4 top-24`) and 1-month layout on mobile
   - Navbar replaces the small `PARAGON ADEER` mono tag with **DM Serif Display** in charcoal, separated from the logo by a thin vertical divider — reads as a co-brand
 - **Mobile user menu** (`446295c`): Sign out button on mobile is replaced with a 36px Sakneen-blue circular avatar showing initials (FH for Fouad Harraz, etc). Tap → dropdown with name + email + Profile link + Sign out. Desktop unchanged.
+
+## Session 2026-05-11: PDF realignment to reference + mobile chart polish
+
+### PDF print template
+
+The generated PDF had drifted from the static reference (`public/Paragon_Adeer_EOI_Report.pdf`). Cover was rendering on a white sheet, Type Composition bars on page 5 were both blue with no labels, daily charts on pages 3-4 clipped the last x-axis date. Fixed in `20903d0`:
+
+- `@page { margin: 14mm }` → `margin: 0`; moved the inset to per-page padding so the cover can paint edge-to-edge. `.page-cover` now `width/height: 210x297mm`, `box-sizing: border-box`, solid Sakneen blue, `print-color-adjust: exact`.
+- Cover meta row tightened to `font-size: 11px; white-space: nowrap` so the reporting date range stays on one line in the 3-column footer.
+- `PrintTypeBar`: Admin segment switched from `ACCENT_BLUE` to `REJECTED_RED` so the split is visible against the Sakneen-blue Residential segment. Added centered `LabelList` percent labels and a `%` x-axis tick.
+- `PrintDailyChart`: x-axis ticks `angle={-45}`, `textAnchor="end"`, `interval={0}`, `height={36}` so every date label fits and "09 May" stops clipping. Count chart gets per-bar value labels; Value chart switched to terracotta fill.
+- New `scripts/regen-pdf.ts` for one-shot PDF regen on any uploadId (no status mutation). Run: `set -a; source .env.local; set +a; npx tsx scripts/regen-pdf.ts <uploadId> http://localhost:3001`.
+
+### Dashboard mobile
+
+- `TypeCompositionBar` on the unit-type card was rendering with ~120px of fixed left gutter (60px YAxis width + 60px chart left margin), so on mobile the bars only filled the right half of the card. Added a `useIsMobile()` matchMedia hook; on `<640px` the y-axis label shortens to "Count"/"Value", the gutter drops to 40px, and percent labels render inside each bar segment via `LabelList`.
+
+### Prod follow-up
+
+The fix is in code but the published Paragon upload still has its old cached PDF on disk (`pdf_path` set, file exists, fast-path serves it). To pick up the new design in prod, either re-publish the upload from `/admin` (regenerates automatically) or run `scripts/regen-pdf.ts` against the prod DB. Running the script from local would need prod `DATABASE_URL` exported — simpler to republish from the admin UI.
 
 ## What runs where
 
