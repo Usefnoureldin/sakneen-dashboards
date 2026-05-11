@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   Cell,
+  LabelList,
   Legend,
   Pie,
   PieChart,
@@ -42,11 +43,15 @@ export function PrintDailyChart({
   const isCount = metric === "count";
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+      <BarChart data={data} margin={{ top: 6, right: 16, left: 0, bottom: 18 }}>
         <XAxis
           dataKey="date"
           tickFormatter={(d) => formatDateShort(d)}
-          interval="preserveStartEnd"
+          interval={0}
+          angle={-45}
+          textAnchor="end"
+          height={36}
+          tickMargin={4}
           {...axisProps}
         />
         <YAxis
@@ -95,9 +100,20 @@ export function PrintDailyChart({
         ) : (
           <Bar
             dataKey={isCount ? "count" : "value"}
-            fill={isCount ? BLUE : ACCENT_BLUE}
+            fill={isCount ? BLUE : REJECTED_RED}
             isAnimationActive={false}
-          />
+          >
+            {isCount ? (
+              <LabelList
+                dataKey="count"
+                position="top"
+                fill="#374151"
+                fontSize={8}
+                fontFamily="var(--font-sans)"
+                formatter={(v: number) => (v > 0 ? String(v) : "")}
+              />
+            ) : null}
+          </Bar>
         )}
       </BarChart>
     </ResponsiveContainer>
@@ -176,10 +192,16 @@ export function PrintTypeBar({
       Admin: (adminValue / tValue) * 100,
     },
   ];
+  const pctLabel = (v: number) => (v >= 4 ? `${v.toFixed(1)}%` : "");
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart layout="vertical" data={data} margin={{ top: 0, right: 8, bottom: 0, left: 56 }}>
-        <XAxis type="number" hide domain={[0, 100]} />
+      <BarChart layout="vertical" data={data} margin={{ top: 4, right: 32, bottom: 18, left: 56 }}>
+        <XAxis
+          type="number"
+          domain={[0, 100]}
+          tickFormatter={(v) => `${v}%`}
+          {...axisProps}
+        />
         <YAxis type="category" dataKey="label" width={56} {...axisProps} />
         <Legend
           wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono)" }}
@@ -188,8 +210,28 @@ export function PrintTypeBar({
           align="right"
           verticalAlign="top"
         />
-        <Bar dataKey="Residential" stackId="t" fill={BLUE} isAnimationActive={false} />
-        <Bar dataKey="Admin" stackId="t" fill={ACCENT_BLUE} isAnimationActive={false} />
+        <Bar dataKey="Residential" stackId="t" fill={BLUE} isAnimationActive={false}>
+          <LabelList
+            dataKey="Residential"
+            position="center"
+            formatter={pctLabel}
+            fill="#FFFFFF"
+            fontSize={11}
+            fontWeight={600}
+            fontFamily="var(--font-sans)"
+          />
+        </Bar>
+        <Bar dataKey="Admin" stackId="t" fill={REJECTED_RED} isAnimationActive={false}>
+          <LabelList
+            dataKey="Admin"
+            position="center"
+            formatter={pctLabel}
+            fill="#FFFFFF"
+            fontSize={11}
+            fontWeight={600}
+            fontFamily="var(--font-sans)"
+          />
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
