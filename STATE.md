@@ -2,10 +2,10 @@
 
 > Living status doc. Update when something ships, breaks, or changes direction.
 > Source of truth for "where are we?" so a fresh Claude session (or human) can catch up in 60 seconds.
-> Last updated: 2026-05-11 (session 3 - PDF/print + mobile chart fixes)
+> Last updated: 2026-05-13 (session 4 - custom domain live for Paragon)
 >
 > Deploys: Railway auto-deploys on push to `main` (Railway GitHub App, requires Hobby plan or higher — both wired 2026-05-10). No more `railway up` from local.
-> Live: https://paragonadeer-production.up.railway.app
+> Live: https://paragonadeeranalytics.sakneen.ai (railway URL https://paragonadeer-production.up.railway.app still resolves but 307s to the custom domain)
 
 ## TL;DR
 
@@ -103,6 +103,27 @@ All four sections mirrored in the print PDF as new pages 6-9 (daily ledger renum
   - Navbar replaces the small `PARAGON ADEER` mono tag with **DM Serif Display** in charcoal, separated from the logo by a thin vertical divider — reads as a co-brand
 - **Mobile user menu** (`446295c`): Sign out button on mobile is replaced with a 36px Sakneen-blue circular avatar showing initials (FH for Fouad Harraz, etc). Tap → dropdown with name + email + Profile link + Sign out. Desktop unchanged.
 
+## Session 2026-05-13: custom domain live for Paragon
+
+### Domain wiring
+
+- `paragonadeeranalytics.sakneen.ai` added as a custom domain on the `paragonadeer` Railway service. DNS CNAME pointed at Railway's edge. Decision: rename Paragon's client slug from `paragonadeer` to `paragonadeeranalytics` so the branded URL is the tenant slug (vs. the shorter alternative `paragonadeer.sakneen.ai`).
+- `RAILWAY_PUBLIC_DOMAIN` is now the custom domain. Cert provisioned, edge responding.
+
+### AUTH_URL gotcha (and fix)
+
+Custom domain visitors were 307-redirected to `paragonadeer-production.up.railway.app/login` instead of staying on the branded host. Cause: `AUTH_URL` env var was hardcoded to the railway URL, and NextAuth (Auth.js v5) prefers `AUTH_URL` over `trustHost` when both are set.
+
+Fix: set `AUTH_URL=https://paragonadeeranalytics.sakneen.ai`. Redeploy triggered automatically. Verified `paragonadeeranalytics.sakneen.ai/` now 307s to its own `/login`, and the railway URL 307s outbound to the branded domain (so the railway URL is effectively neutralized even though it still resolves at the edge).
+
+**Future custom domain setups:** update `AUTH_URL` to match every time, or `pdf-generator.ts`'s `resolvePrintBaseUrl` chain (PRINT_BASE_URL → AUTH_URL → x-forwarded-host → host) will quietly pin PDFs to the old host too.
+
+### Slug rename
+
+Prod `clients` table: `UPDATE clients SET slug='paragonadeeranalytics' WHERE slug='paragonadeer'` (client UUID `5f36030f-3bb1-4632-97ae-7d564c14a804`, displayName unchanged at "Paragon Adeer"). Caught when Fouad signed in and got `URL tenant 'paragonadeeranalytics' does not match your account` — the rename had been decided but never executed in the DB.
+
+`scripts/seed.ts` updated to use `paragonadeeranalytics` for both `ensureClient()` and all 4 client-user records, so a fresh local seed matches prod.
+
 ## Session 2026-05-11: PDF realignment to reference + mobile chart polish
 
 ### PDF print template
@@ -152,7 +173,8 @@ Still open (defaults may have been silently applied, confirm before relying on):
 ## Known gaps / likely next work
 
 - **Forgot-password flow** parked. Will use Resend for sending reset links. Need: verified `EMAIL_FROM` on a sakneen.com subdomain (SPF/DKIM), a `password_reset_tokens` table, /forgot + /reset pages, audit + rate limit. Half-day of work.
-- **Custom domain** `paragonadeer.sakneen.com` not configured. Add via Railway service Settings → Networking → Custom Domain, then CNAME in DNS. 5-min job. Tenant resolution code in `src/lib/tenant.ts` already picks up the slug from the subdomain.
+- **Railway auto-generated domain** (`paragonadeer-production.up.railway.app`) still resolves and just 307s to the custom domain. Optional cleanup: delete it in Railway Settings → Networking. Not critical since auth redirect already covers it.
+- **`tenant.ts` APEX_HOSTS** doesn't list `sakneen.ai` variants. Not a problem today (we only use a single subdomain there), but the moment we point `sakneen.ai` or `dashboards.sakneen.ai` at this app, those need to be added so they don't resolve as a tenant slug.
 - The existing prod upload from before today's session predates the 5 new record columns (`bulk_eoi_id`, `eoi_category`, etc), so its 4 new dashboard sections are empty. Re-uploading the May 9 (or current) Excel via /admin and clicking Publish populates everything.
 
 ## How to update this doc

@@ -30,10 +30,10 @@ const SEED_USERS: SeedUser[] = [
   { email: "youssef@sakneen.com", name: "Youssef Noureldin", role: "sakneen_admin", clientSlug: null },
   { email: "nadia@sakneen.com", name: "Nadia", role: "sakneen_admin", clientSlug: null },
   // Paragon Adeer
-  { email: "fouad.harraz@paragonadeer.com", name: "Fouad Harraz", role: "client_user", clientSlug: "paragonadeer" },
-  { email: "eslam.abdelazim@paragonadeer.com", name: "Eslam Abdelazim", role: "client_user", clientSlug: "paragonadeer" },
-  { email: "omar.nasser@paragonadeer.com", name: "Omar Nasser", role: "client_user", clientSlug: "paragonadeer" },
-  { email: "sara.robel@weareparagon.dev", name: "Sara Robel", role: "client_user", clientSlug: "paragonadeer" },
+  { email: "fouad.harraz@paragonadeer.com", name: "Fouad Harraz", role: "client_user", clientSlug: "paragonadeeranalytics" },
+  { email: "eslam.abdelazim@paragonadeer.com", name: "Eslam Abdelazim", role: "client_user", clientSlug: "paragonadeeranalytics" },
+  { email: "omar.nasser@paragonadeer.com", name: "Omar Nasser", role: "client_user", clientSlug: "paragonadeeranalytics" },
+  { email: "sara.robel@weareparagon.dev", name: "Sara Robel", role: "client_user", clientSlug: "paragonadeeranalytics" },
 ];
 
 function generatePassword(): string {
@@ -77,7 +77,7 @@ async function ensureUser(u: SeedUser, clientId: string | null) {
 }
 
 async function main() {
-  const paragon = await ensureClient("paragonadeer", "Paragon Adeer", "Paragon Adeer");
+  const paragon = await ensureClient("paragonadeeranalytics", "Paragon Adeer", "Paragon Adeer");
 
   const slugToId = new Map<string, string>([[paragon.slug, paragon.id]]);
 
